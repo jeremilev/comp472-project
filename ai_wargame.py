@@ -414,15 +414,15 @@ class Game:
 
             # if action = move
             if dst_unit == None:
+                self.record_move(coords, action="move")
                 self.set(coords.dst, self.get(coords.src))
                 self.set(coords.src, None)
-                self.record_move(coords, action="move")
                 return (True, "")
 
             # if action = attack
             if dst_unit.player != self.next_player:
-                self.attack(coords)
                 self.record_move(coords, action="attack")
+                self.attack(coords)
                 return (True, "")  # TODO check if return is correct
 
             # checks if unit on destination belongs to player
@@ -430,8 +430,8 @@ class Game:
 
                 # if action = self_destruct
                 if coords.src == coords.dst:
-                    self.perform_self_destruct(coords.src)
                     self.record_move(coords, action="self-destruct")
+                    self.perform_self_destruct(coords.src)
                     return (True, "")  # TODO check if return is correct
 
                 # if action = repair
@@ -674,19 +674,20 @@ class Game:
 
     def record_move(self, coords: CoordPair, action: str):
         unit = self.get(coords.src)
-        player = unit.player.name 
+        player = unit.player.name
         if action == "move":
-            stringAction = "move from " + str(coords.src) + " to " +str(coords.dst)
+            stringAction = "moved from " + \
+                str(coords.src) + " to " + str(coords.dst)
         elif action == "attack":
-            stringAction = str(coords.src) + " attacks " + str(coords.dst)
+            stringAction = str(coords.src) + " attacked " + str(coords.dst)
         elif action == "repair":
-            stringAction = str(coords.src) + " repaired " +str(coords.dst)
+            stringAction = str(coords.src) + " repaired " + str(coords.dst)
         elif action == "self-destruct":
             stringAction = str(coords.src) + " self-destructed!"
 
-        stringAction = "Turn number: " + self.turns_played + " " + player + " " + stringAction + "\n\n"
+        stringAction = "\nTurn #" + str(self.turns_played) + \
+            " " + player + " " + stringAction + "\n\n"
         stringAction += self.to_string()
-
 
         self.moves_history.append(stringAction)
 
@@ -699,47 +700,50 @@ class Game:
     def game_trace_to_file(self, initialBoard):
         try:
             # Build the variable with all game options + initial configuration
-            
+
             game_timeout = self.options.max_time
             num_of_turns = self.options.max_turns
-            filename = "gameTrace-"+str(game_timeout)+"-"+str(num_of_turns)+".txt"
-            f = open(filename,"w")
+            filename = "gameTrace-" + \
+                str(self.options.alpha_beta).lower() + "-" + \
+                str(game_timeout)+"-"+str(num_of_turns)+".txt"
+            f = open(filename, "w")
 
-            text = str(self.options) + "\n"
+            text = "Game Trace" + "\n" + \
+                "---------------------------------------------------------" + "\n"
+            text += "The game parameters are: \n\n"
+            text += "Maximum time allowed: " + \
+                str(self.options.max_time) + "\n"
+            text += "Maximum turns allowed: " + \
+                str(self.options.max_turns) + "\n"
+
+            if (str(self.options.game_type) == 'GameType.AttackerVsDefender'):  # Human game
+                text += "Game mode: player 1 = Human & player 2 = Human"
+            else:
+                text += "Alpha-beta is not yet implemented, AI players do not yet use heuristics - they only perform randomly chosen moves.\n"
+                """
+                if (self.options.alpha_beta):
+                    text += "Alpha-beta is on"
+                else:
+                    text += "Alpha-beta is off"
+                """
+                if (str(self.options.game_type) == 'GameType.AttackerVsComp'):
+                    text += "Game mode: player 1 = Human & player 2 = AI"
+                elif (str(self.options.game_type) == 'GameType.CompVsDefender'):
+                    text += "Game mode: player 1 = AI & player 2 = Human"
+                else:
+                    text += "Game mode: player 1 = AI & player 2 = AI"
+            text += "\n---------------------------------------------------------" + "\n"
+            text += "Initial Board:" + "\n"
             text += str(initialBoard) + "\n"
-            #text += self.to_string()
+            text += "---------------------------------------------------------" + "\n"
+            text += "Every turn information: \n"
+            # text += self.to_string()
 
             for i in self.moves_history:
                 text += str(i) + "\n"
-            
 
             f.write(text)
             f.close()
-            print("Trace file created!\n")
-
-
-            """
-            # Create dictionary with important info:
-            winner = self.has_winner()
-            print(winner)
-
-            # Convert CoordPair object to string for JSON
-            m_history = []
-            for x in self.moves_history:
-                m_history.append(x.to_string())
-
-            # Create Dictionary for JSON
-            game_recap = {
-                "winner": winner.name,
-                "movesHistory": m_history,
-                "maxTurns": self.options.max_turns,
-                "nbOfTurns": self.turns_played,
-                "endBoard": self.to_string()
-            }
-            # Open and write dictionary as JSON to file game_trace.json
-            with open('game_trace.json', 'w') as f:
-                json.dump(game_recap, f, indent=4)
-            """
         except Exception as e:
             print('Could not output game trace to file.', e)
 
@@ -789,7 +793,7 @@ def main():
     game = Game(options=options)
     print()
     print()
-    initialBoard = game.initial_Board
+    initialBoard = game.initial_Board()
 
     # the main game loop
     while True:

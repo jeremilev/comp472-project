@@ -1,5 +1,9 @@
 # comp472-project
 
+## Quick notes
+- Only Human vs Human is fully supported at the moment.
+- Human vs Human is the default game parameter.
+
 ## Steps to start the program
 1. To play the game with the default parameters, run the ai_wargame.py file using this at your command line:
 ```
@@ -22,8 +26,10 @@ Here is the list of game parameters:
 | ... | <b>More to come with demo2 </b>|
 | game_type | see below |
 ```python
-                   # attacker vs defender
---game_type manual # human vs human
+                     # attacker vs defender
+--game_type manual   # human vs human
 --game_type attacker #human vs computer
 --game_type defender #computer vs human
+--game_type auto     #computer vs computer
+# current default    #human vs human
 ```

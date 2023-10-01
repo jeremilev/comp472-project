@@ -1,0 +1,34 @@
+Game Trace
+---------------------------------------------------------
+The game parameters are: 
+
+Maximum time allowed: 5.0
+Maximum turns allowed: 100
+Game mode: player 1 = Human & player 2 = Human
+---------------------------------------------------------
+Initial Board:
+Next player: Attacker
+Turns played: 0
+
+    0   1   2   3   4  
+A: dA9 dT9 dF9  .   .  
+B: dT9 dP9  .   .   .  
+C: dF9  .   .   .  aP9 
+D:  .   .   .  aF9 aV9 
+E:  .   .  aP9 aV9 aA9 
+
+---------------------------------------------------------
+Every turn information: 
+
+Turn #0 Attacker E4 self-destructed!
+
+Next player: Attacker
+Turns played: 0
+
+    0   1   2   3   4  
+A: dA9 dT9 dF9  .   .  
+B: dT9 dP9  .   .   .  
+C: dF9  .   .   .  aP9 
+D:  .   .   .  aF9 aV9 
+E:  .   .  aP9 aV9 aA9 
+
