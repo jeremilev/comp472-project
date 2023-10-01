@@ -672,18 +672,52 @@ class Game:
         self.mod_health(coords.dst, restored_health)
         return True
 
-    def record_move(self, coords: CoordPair):
-        self.moves_history.append(coords)
+    def record_move(self, coords: CoordPair, action: str):
+        unit = self.get(coords.src)
+        player = unit.player.name 
+        if action == "move":
+            stringAction = "move from " + str(coords.src) + " to " +str(coords.dst)
+        elif action == "attack":
+            stringAction = str(coords.src) + " attacks " + str(coords.dst)
+        elif action == "repair":
+            stringAction = str(coords.src) + " repaired " +str(coords.dst)
+        elif action == "self-destruct":
+            stringAction = str(coords.src) + " self-destructed!"
+
+        stringAction = "Turn number: " + self.turns_played + " " + player + " " + stringAction + "\n\n"
+        stringAction += self.to_string()
+
+
+        self.moves_history.append(stringAction)
+
         return
 
     def print_history(self):
         for i in self.moves_history:
             print(i)
 
-    def game_trace_to_file(self):
+    def game_trace_to_file(self, initialBoard):
         try:
             # Build the variable with all game options + initial configuration
-            # f = open('')
+            
+            game_timeout = self.options.max_time
+            num_of_turns = self.options.max_turns
+            filename = "gameTrace-"+str(game_timeout)+"-"+str(num_of_turns)+".txt"
+            f = open(filename,"w")
+
+            text = str(self.options) + "\n"
+            text += str(initialBoard) + "\n"
+            #text += self.to_string()
+
+            for i in self.moves_history:
+                text += str(i) + "\n"
+            
+
+            f.write(text)
+            f.close()
+            print("Trace file created!\n")
+
+
             """
             # Create dictionary with important info:
             winner = self.has_winner()
@@ -708,6 +742,9 @@ class Game:
             """
         except Exception as e:
             print('Could not output game trace to file.', e)
+
+    def initial_Board(self):
+        return self.to_string()
 ##############################################################################################################
 
 
@@ -752,7 +789,7 @@ def main():
     game = Game(options=options)
     print()
     print()
-    print(game.options)
+    initialBoard = game.initial_Board
 
     # the main game loop
     while True:
@@ -763,6 +800,7 @@ def main():
         if winner is not None:
             # Output moves to file
             game.print_history()
+            game.game_trace_to_file(initialBoard)
 
             print(f"{winner.name} wins!")
             break
