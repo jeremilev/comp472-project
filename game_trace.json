@@ -1,1 +1,9 @@
-{"winner": "Defender", "movesHistory": ["E4 E4"], "maxTurns": 100, "nbOfTurns": 1, "endBoard": "Next player: Defender\nTurns played: 1\n\n    0   1   2   3   4  \nA: dA9 dT9 dF9  .   .  \nB: dT9 dP9  .   .   .  \nC: dF9  .   .   .  aP9 \nD:  .   .   .  aF7 aV7 \nE:  .   .  aP9 aV7  .  \n"}
+{
+    "winner": "Defender",
+    "movesHistory": [
+        "E4 E4"
+    ],
+    "maxTurns": 100,
+    "nbOfTurns": 1,
+    "endBoard": "Next player: Defender\nTurns played: 1\n\n    0   1   2   3   4  \nA: dA9 dT9 dF9  .   .  \nB: dT9 dP9  .   .   .  \nC: dF9  .   .   .  aP9 \nD:  .   .   .  aF7 aV7 \nE:  .   .  aP9 aV7  .  \n"
+}

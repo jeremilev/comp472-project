@@ -700,7 +700,7 @@ class Game:
             }
             # Open and write dictionary as JSON to file game_trace.json
             with open('game_trace.json', 'w') as f:
-                json.dump(game_recap, f)
+                json.dump(game_recap, f, indent=4)
         except Exception as e:
             print('Could not output game trace to file.', e)
 ##############################################################################################################
