@@ -758,7 +758,6 @@ def main():
     while True:
         print()
         print(game)
-        print(game.options.max_turns)
 
         winner = game.has_winner()
         if winner is not None:
