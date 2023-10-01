@@ -269,6 +269,7 @@ class Game:
     _attacker_has_ai: bool = True
     _defender_has_ai: bool = True
     moves_history = []
+    board_history = []
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
@@ -417,12 +418,14 @@ class Game:
                 self.record_move(coords, action="move")
                 self.set(coords.dst, self.get(coords.src))
                 self.set(coords.src, None)
+                self.record_board()
                 return (True, "")
 
             # if action = attack
             if dst_unit.player != self.next_player:
                 self.record_move(coords, action="attack")
                 self.attack(coords)
+                self.record_board()
                 return (True, "")  # TODO check if return is correct
 
             # checks if unit on destination belongs to player
@@ -432,12 +435,14 @@ class Game:
                 if coords.src == coords.dst:
                     self.record_move(coords, action="self-destruct")
                     self.perform_self_destruct(coords.src)
+                    self.record_board()
                     return (True, "")  # TODO check if return is correct
 
                 # if action = repair
                 else:
                     if self.repair(coords):
                         self.record_move(coords, action="repair")
+                        self.record_board()
                         return (True, "")  # TODO check if return is correct
                     else:
                         return (False, "invalid move")
@@ -446,6 +451,7 @@ class Game:
             if coords.src == coords.dst:
                 self.record_move(coords, action="self-destruct")
                 self.perform_self_destruct(coords.src)
+                self.record_board()
         return (False, "invalid move")
 
     def next_turn(self):
@@ -551,7 +557,7 @@ class Game:
 
     def has_winner(self) -> Player | None:
         """Check if the game is over and returns winner"""
-        if self.options.max_turns is not None and self.turns_played >= self.options.max_turns:
+        if self.options.max_turns is not None and self.turns_played > self.options.max_turns:
             return Player.Defender
         elif self._attacker_has_ai:
             if self._defender_has_ai:
@@ -683,15 +689,18 @@ class Game:
         elif action == "repair":
             stringAction = str(coords.src) + " repaired " + str(coords.dst)
         elif action == "self-destruct":
-            stringAction = str(coords.src) + " self-destructed!"
+            stringAction = str(unit) + " at " + \
+                str(coords.src) + " self-destructed!"
 
         stringAction = "\nTurn #" + str(self.turns_played) + \
             " " + player + " " + stringAction + "\n\n"
-        stringAction += self.to_string()
 
         self.moves_history.append(stringAction)
 
         return
+
+    def record_board(self):
+        self.board_history.append(self.to_string())
 
     def print_history(self):
         for i in self.moves_history:
@@ -712,14 +721,16 @@ class Game:
                 "---------------------------------------------------------" + "\n"
             text += "The game parameters are: \n\n"
             text += "Maximum time allowed: " + \
-                str(self.options.max_time) + "\n"
+                str(self.options.max_time) + \
+                "    *Note this does not apply to Human players.\n"
             text += "Maximum turns allowed: " + \
                 str(self.options.max_turns) + "\n"
 
             if (str(self.options.game_type) == 'GameType.AttackerVsDefender'):  # Human game
                 text += "Game mode: player 1 = Human & player 2 = Human"
             else:
-                text += "Alpha-beta is not yet implemented, AI players do not yet use heuristics - they only perform randomly chosen moves.\n"
+                text += "Alpha-beta is not yet implemented, AI players do not yet use heuristics - they only perform randomly chosen moves.\n" + \
+                    "*For these reasons, we do not track evals by depth, etc.\n\n"
                 """
                 if (self.options.alpha_beta):
                     text += "Alpha-beta is on"
@@ -736,12 +747,16 @@ class Game:
             text += "Initial Board:" + "\n"
             text += str(initialBoard) + "\n"
             text += "---------------------------------------------------------" + "\n"
-            text += "Every turn information: \n"
+            text += "Every turn information:"
             # text += self.to_string()
 
-            for i in self.moves_history:
-                text += str(i) + "\n"
-
+            for i in range(0, len(self.moves_history)):
+                text += "\n\n"
+                text += str(self.moves_history[i])
+                text += self.board_history[i]
+            winner = self.has_winner()
+            text += "\n\n" + winner.name + " won the game in " + \
+                str(self.turns_played - 1) + " turns."
             f.write(text)
             f.close()
         except Exception as e:
@@ -794,7 +809,7 @@ def main():
     print()
     print()
     initialBoard = game.initial_Board()
-
+    game.turns_played += 1
     # the main game loop
     while True:
         print()

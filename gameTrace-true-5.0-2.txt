@@ -3,11 +3,8 @@ Game Trace
 The game parameters are: 
 
 Maximum time allowed: 5.0    *Note this does not apply to Human players.
-Maximum turns allowed: 100
-Alpha-beta is not yet implemented, AI players do not yet use heuristics - they only perform randomly chosen moves.
-*For these reasons, we do not track evals by depth, etc.
-
-Game mode: player 1 = AI & player 2 = AI
+Maximum turns allowed: 2
+Game mode: player 1 = Human & player 2 = Human
 ---------------------------------------------------------
 Initial Board:
 Next player: Attacker
@@ -21,10 +18,11 @@ D:  .   .   .  aF9 aV9
 E:  .   .  aP9 aV9 aA9 
 
 ---------------------------------------------------------
-Every turn information:
+Every turn information: 
+
+Turn #1 Attacker E2 self-destructed!
 
 
-Turn #1 Attacker aF9 at D3 self-destructed!
 
 Next player: Attacker
 Turns played: 1
@@ -32,23 +30,23 @@ Turns played: 1
     0   1   2   3   4  
 A: dA9 dT9 dF9  .   .  
 B: dT9 dP9  .   .   .  
-C: dF9  .   .   .  aP7 
-D:  .   .   .   .  aV7 
-E:  .   .  aP7 aV7 aA7 
+C: dF9  .   .   .  aP9 
+D:  .   .   .  aF7 aV9 
+E:  .   .   .  aV7 aA9 
+
+Turn #2 Defender C0 self-destructed!
 
 
-
-Turn #2 Defender dA9 at A0 self-destructed!
 
 Next player: Defender
 Turns played: 2
 
     0   1   2   3   4  
-A:  .  dT7 dF9  .   .  
+A: dA9 dT9 dF9  .   .  
 B: dT7 dP7  .   .   .  
-C: dF9  .   .   .  aP7 
-D:  .   .   .   .  aV7 
-E:  .   .  aP7 aV7 aA7 
+C:  .   .   .   .  aP9 
+D:  .   .   .  aF7 aV9 
+E:  .   .   .  aV7 aA9 
 
 
-Attacker won the game in 2 turns.
+Defender won the game in 3 turns.
