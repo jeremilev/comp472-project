@@ -1,0 +1,52 @@
+Game Trace
+---------------------------------------------------------
+The game parameters are: 
+
+Maximum time allowed: 5.0    *Note this does not apply to Human players.
+Maximum turns allowed: 2
+Game mode: player 1 = Human & player 2 = Human
+---------------------------------------------------------
+Initial Board:
+Next player: Attacker
+Turns played: 0
+
+    0   1   2   3   4  
+A: dA9 dT9 dF9  .   .  
+B: dT9 dP9  .   .   .  
+C: dF9  .   .   .  aP9 
+D:  .   .   .  aF9 aV9 
+E:  .   .  aP9 aV9 aA9 
+
+---------------------------------------------------------
+Every turn information: 
+
+Turn #1 Attacker E2 self-destructed!
+
+
+
+Next player: Attacker
+Turns played: 1
+
+    0   1   2   3   4  
+A: dA9 dT9 dF9  .   .  
+B: dT9 dP9  .   .   .  
+C: dF9  .   .   .  aP9 
+D:  .   .   .  aF7 aV9 
+E:  .   .   .  aV7 aA9 
+
+Turn #2 Defender C0 self-destructed!
+
+
+
+Next player: Defender
+Turns played: 2
+
+    0   1   2   3   4  
+A: dA9 dT9 dF9  .   .  
+B: dT7 dP7  .   .   .  
+C:  .   .   .   .  aP9 
+D:  .   .   .  aF7 aV9 
+E:  .   .   .  aV7 aA9 
+
+
+Defender won the game in 3 turns.
