@@ -591,6 +591,15 @@ class Game:
         except Exception as error:
             print(f"Broker error: {error}")
         return None
+    
+    
+    def attack(self, target: Unit)
+        target.mod_health(damage_amount(self, target))
+        return
+    
+    #def repair(self, target: Unit)
+        #target.mod_health(repair_amount())
+        #return
 
 ##############################################################################################################
 
