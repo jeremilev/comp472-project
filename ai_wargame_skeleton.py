@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from time import sleep
 from typing import Tuple, TypeVar, Type, Iterable, ClassVar
 import random
-# import requests
+import requests
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
@@ -150,6 +150,18 @@ class Coord:
         yield Coord(self.row, self.col-1)
         yield Coord(self.row+1, self.col)
         yield Coord(self.row, self.col+1)
+
+    def iter_adjacent_with_diagonal(self) -> Iterable[Coord]:
+        """Iterates over adjacent Coords."""
+        yield Coord(self.row-1, self.col)
+        yield Coord(self.row, self.col-1)
+        yield Coord(self.row+1, self.col)
+        yield Coord(self.row, self.col+1)
+        yield Coord(self.row+1, self.col+1)
+        yield Coord(self.row+1, self.col-1)
+        yield Coord(self.row-1, self.col+1)
+        yield Coord(self.row-1, self.col-1)
+
 
     @classmethod
     def from_string(cls, s: str) -> Coord | None:
@@ -345,6 +357,10 @@ class Game:
         # Validates that there is a unit at the source coordinates and if it belongs to the player.
         if unit is None or unit.player != self.next_player:
             return False
+        
+        # Check if player intends to self destruct
+        if coords.dst == coords.src:
+            return True
         # Get player type
         player_type = unit.player
         # Get unit type
@@ -354,15 +370,19 @@ class Game:
         print(unit_destination)
 
         # Check if unit is engaged in combat
-        adjacent_units = list([x for x in coords.src.iter_adjacent()])
-        print(adjacent_units)
+        adjacent_coords = list([x for x in coords.src.iter_adjacent()])
+        print(adjacent_coords)
         # Check if the destination is empty.
+
+
+        """
         if unit_destination is not None:
             if (unit_destination.player == self.next_player):  # Destination unit is ally
                 # Check if self-destructing
                 if (coords.src == coords.dst):
                     print('self destruct')
                     # call self-destruct function
+
                     # unit.self_destruct() maybe?
                 # If appropriate, call repair function, else, return false
                 print('repairing')
@@ -371,9 +391,29 @@ class Game:
                 # If appropriate, call attacking function, else return false
                 print('attacking')
                 return False
-        # Verify if source and destination coordinates are adjacent and in the correct direction.
+        """
+
         print(unit_type)
+
+        #Verify if dest coords are adjacent
+        if coords.dst not in adjacent_coords and coords.dst != coords.src:
+            return False
+
+        #attack or repairing a unit on an adjacent field is always a valid move 
+        if unit_destination != None:
+            return True
+
+        # Verify that movement is in the right direction
         if (unit_type != UnitType.Tech and unit_type != UnitType.Virus):
+
+            #check if unit is enaged in combat
+            for coord in adjacent_coords:
+                    unit = self.get(coord)
+                    if unit == None: 
+                        continue
+                    if unit.player != self.next_player:
+                        return False
+
             if (player_type.value == 0):  # Is attacker
                 if coords.src.row < coords.dst.row or coords.src.col < coords.dst.col:  # Unit is moving down -> illegal
                     return False
@@ -382,12 +422,48 @@ class Game:
                     return False
         return True
 
+    def perform_self_destruct(self,coord: Coord):
+        """Makes a unit on a given field destroy itself and damages all units on diagonal and adjacant fields."""
+        self.mod_health(coord, -9)
+        for adjacent_coord in coord.iter_adjacent_with_diagonal():
+            adjacent_unit = self.get(adjacent_coord)
+            if adjacent_unit != None:
+                self.mod_health(adjacent_coord, -2)
+
     def perform_move(self, coords: CoordPair) -> Tuple[bool, str]:
         """Validate and perform a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
         if self.is_valid_move(coords):
-            self.set(coords.dst, self.get(coords.src))
-            self.set(coords.src, None)
-            return (True, "")
+            dst_unit = self.get(coords.dst)
+
+            #if action = move
+            if dst_unit == None:
+                self.set(coords.dst, self.get(coords.src))
+                self.set(coords.src, None)
+                return (True, "")  
+
+            #if action = attack
+            if dst_unit.player != self.next_player:
+                self.attack(coords)
+                return (True, "") # TODO check if return is correct  
+            
+            #checks if unit on destination belongs to player
+            if dst_unit.player == self.next_player:
+
+                #if action = self_destruct
+                if coords.src == coords.dst:
+                    self.perform_self_destruct(coords.src)
+                    return (True, "") # TODO check if return is correct  
+
+                #if action = repair
+                else:
+                    if self.repair(coords):
+                        return (True, "") # TODO check if return is correct
+                    else:
+                        return (False, "invalid move")  
+
+            #if action = self_destruct
+            if coords.src == coords.dst:
+                self.perform_self_destruct(coords.src)          
         return (False, "invalid move")
 
     def next_turn(self):
@@ -595,13 +671,25 @@ class Game:
         return None
     
     
-    def attack(self, target: Unit)
-        target.mod_health(damage_amount(self, target))
-        return
+    def attack(self, coords: CoordPair):
+        """lets a unit on one coordinate attack a unit on another. Requires pre-check if attack is possible."""
+        attacking_unit = self.get(coords.src)
+        defending_unit = self.get(coords.dst)
+        attack_damage = attacking_unit.damage_amount(defending_unit)
+        self_damage = defending_unit.damage_amount(attacking_unit)
+        self.mod_health(coords.dst, -attack_damage)
+        self.mod_health(coords.src, -self_damage)
     
-    #def repair(self, target: Unit)
-        #target.mod_health(repair_amount())
-        #return
+    def repair(self, coords: CoordPair) -> bool:
+        """lets a unit on one coordinate repair a unit on another. Requires pre-check if repair is possible. 
+        Returns if repair was successful."""
+        repairing_unit = self.get(coords.src)
+        target_unit = self.get(coords.dst)
+        restored_health = repairing_unit.repair_amount(target_unit)
+        if restored_health == 0: 
+            return False #if the health change is 0, it is not a valid move
+        self.mod_health(coords.dst, restored_health)
+        return True
 
 ##############################################################################################################
 
