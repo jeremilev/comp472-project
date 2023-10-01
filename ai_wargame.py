@@ -680,9 +680,13 @@ class Game:
         for i in self.moves_history:
             print(i)
 
-    def game_trace_to_file(self, winner: Player):
+    def game_trace_to_file(self):
         try:
+            # Build the variable with all game options + initial configuration
+            # f = open('')
+            """
             # Create dictionary with important info:
+            winner = self.has_winner()
             print(winner)
 
             # Convert CoordPair object to string for JSON
@@ -701,6 +705,7 @@ class Game:
             # Open and write dictionary as JSON to file game_trace.json
             with open('game_trace.json', 'w') as f:
                 json.dump(game_recap, f, indent=4)
+            """
         except Exception as e:
             print('Could not output game trace to file.', e)
 ##############################################################################################################
@@ -716,6 +721,8 @@ def main():
     parser.add_argument('--game_type', type=str, default="manual",
                         help='game type: auto|attacker|defender|manual')
     parser.add_argument('--broker', type=str, help='play via a game broker')
+    parser.add_argument('--max_turns', type=int, default=100,
+                        help='max number of turns: ex: 100')
     args = parser.parse_args()
 
     # parse the game type
@@ -741,15 +748,20 @@ def main():
 
     # create a new game
     game = Game(options=options)
+    print()
+    print()
+    print(game.options)
 
     # the main game loop
     while True:
         print()
         print(game)
+
         winner = game.has_winner()
         if winner is not None:
             # Output moves to file
-            game.game_trace_to_file(winner)
+            game.print_history()
+
             print(f"{winner.name} wins!")
             break
         if game.options.game_type == GameType.AttackerVsDefender:
