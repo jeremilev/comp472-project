@@ -416,13 +416,13 @@ class Game:
             if dst_unit == None:
                 self.set(coords.dst, self.get(coords.src))
                 self.set(coords.src, None)
-                self.record_move(coords)
+                self.record_move(coords, action="move")
                 return (True, "")
 
             # if action = attack
             if dst_unit.player != self.next_player:
                 self.attack(coords)
-                self.record_move(coords)
+                self.record_move(coords, action="attack")
                 return (True, "")  # TODO check if return is correct
 
             # checks if unit on destination belongs to player
@@ -431,20 +431,20 @@ class Game:
                 # if action = self_destruct
                 if coords.src == coords.dst:
                     self.perform_self_destruct(coords.src)
-                    self.record_move(coords)
+                    self.record_move(coords, action="self-destruct")
                     return (True, "")  # TODO check if return is correct
 
                 # if action = repair
                 else:
                     if self.repair(coords):
-                        self.record_move(coords)
+                        self.record_move(coords, action="repair")
                         return (True, "")  # TODO check if return is correct
                     else:
                         return (False, "invalid move")
 
             # if action = self_destruct
             if coords.src == coords.dst:
-                self.record_move(coords)
+                self.record_move(coords, action="self-destruct")
                 self.perform_self_destruct(coords.src)
         return (False, "invalid move")
 
