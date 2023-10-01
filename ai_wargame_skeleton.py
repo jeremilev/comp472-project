@@ -340,7 +340,7 @@ class Game:
         # Validates whether the coordinates are inside the board.
         if not self.is_valid_coord(coords.src) or not self.is_valid_coord(coords.dst):
             return False
-        # Fetches source coordinates.
+        # Fetches unit at source coordinates.
         unit = self.get(coords.src)
         # Validates that there is a unit at the source coordinates and if it belongs to the player.
         if unit is None or unit.player != self.next_player:
@@ -349,16 +349,36 @@ class Game:
         player_type = unit.player
         # Get unit type
         unit_type = unit.type
+        # Fetches unit at destination coordinates.
+        unit_destination = self.get(coords.dst)
+        print(unit_destination)
+
+        # Check if unit is engaged in combat
+        # insert code
+
+        # Check if the destination is empty.
+        if unit_destination is not None:
+            if (unit_destination.player == self.next_player):  # Destination unit is ally
+                # Check if self-destructing
+                if (coords.src == coords.dst):
+                    print('self destruct')
+                    # call self-destruct function
+                    # unit.self_destruct() maybe?
+                # If appropriate, call repair function, else, return false
+                print('repairing')
+                return False
+            else:  # Destinating unit is enemy
+                # If appropriate, call attacking function, else return false
+                print('attacking')
+                return False
         # Verify if source and destination coordinates are adjacent and in the correct direction.
         if (player_type.value == 0):  # Is attacker
             if coords.src.row < coords.dst.row or coords.src.col < coords.dst.col:  # Unit is moving down -> illegal
                 return False
-        else:
+        else:  # Is defender
             if coords.src.row > coords.dst.row or coords.src.col > coords.dst.col:
                 return False
-        # Fetches destination coordinates.
-        unit = self.get(coords.dst)
-        return (unit is None)
+        return True
 
     def perform_move(self, coords: CoordPair) -> Tuple[bool, str]:
         """Validate and perform a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
