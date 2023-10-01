@@ -8,6 +8,7 @@ from time import sleep
 from typing import Tuple, TypeVar, Type, Iterable, ClassVar
 import random
 import requests
+import json
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
@@ -267,6 +268,7 @@ class Game:
     stats: Stats = field(default_factory=Stats)
     _attacker_has_ai: bool = True
     _defender_has_ai: bool = True
+    moves_history = []
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
@@ -406,7 +408,7 @@ class Game:
                 self.mod_health(adjacent_coord, -2)
 
     def perform_move(self, coords: CoordPair) -> Tuple[bool, str]:
-        """Validate and perform a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
+        """Validate and perform a move expressed as a CoordPair."""
         if self.is_valid_move(coords):
             dst_unit = self.get(coords.dst)
 
@@ -414,11 +416,13 @@ class Game:
             if dst_unit == None:
                 self.set(coords.dst, self.get(coords.src))
                 self.set(coords.src, None)
+                self.record_move(coords)
                 return (True, "")
 
             # if action = attack
             if dst_unit.player != self.next_player:
                 self.attack(coords)
+                self.record_move(coords)
                 return (True, "")  # TODO check if return is correct
 
             # checks if unit on destination belongs to player
@@ -427,17 +431,20 @@ class Game:
                 # if action = self_destruct
                 if coords.src == coords.dst:
                     self.perform_self_destruct(coords.src)
+                    self.record_move(coords)
                     return (True, "")  # TODO check if return is correct
 
                 # if action = repair
                 else:
                     if self.repair(coords):
+                        self.record_move(coords)
                         return (True, "")  # TODO check if return is correct
                     else:
                         return (False, "invalid move")
 
             # if action = self_destruct
             if coords.src == coords.dst:
+                self.record_move(coords)
                 self.perform_self_destruct(coords.src)
         return (False, "invalid move")
 
@@ -665,6 +672,37 @@ class Game:
         self.mod_health(coords.dst, restored_health)
         return True
 
+    def record_move(self, coords: CoordPair):
+        self.moves_history.append(coords)
+        return
+
+    def print_history(self):
+        for i in self.moves_history:
+            print(i)
+
+    def game_trace_to_file(self, winner: Player):
+        try:
+            # Create dictionary with important info:
+            print(winner)
+
+            # Convert CoordPair object to string for JSON
+            m_history = []
+            for x in self.moves_history:
+                m_history.append(x.to_string())
+
+            # Create Dictionary for JSON
+            game_recap = {
+                "winner": winner.name,
+                "movesHistory": m_history,
+                "maxTurns": self.options.max_turns,
+                "nbOfTurns": self.turns_played,
+                "endBoard": self.to_string()
+            }
+            # Open and write dictionary as JSON to file game_trace.json
+            with open('game_trace.json', 'w') as f:
+                json.dump(game_recap, f)
+        except Exception as e:
+            print('Could not output game trace to file.', e)
 ##############################################################################################################
 
 
@@ -711,7 +749,7 @@ def main():
         winner = game.has_winner()
         if winner is not None:
             # Output moves to file
-
+            game.game_trace_to_file(winner)
             print(f"{winner.name} wins!")
             break
         if game.options.game_type == GameType.AttackerVsDefender:
