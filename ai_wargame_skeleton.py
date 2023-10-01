@@ -354,8 +354,8 @@ class Game:
         print(unit_destination)
 
         # Check if unit is engaged in combat
-        # insert code
-
+        adjacent_units = list([x for x in coords.src.iter_adjacent()])
+        print(adjacent_units)
         # Check if the destination is empty.
         if unit_destination is not None:
             if (unit_destination.player == self.next_player):  # Destination unit is ally
@@ -372,12 +372,14 @@ class Game:
                 print('attacking')
                 return False
         # Verify if source and destination coordinates are adjacent and in the correct direction.
-        if (player_type.value == 0):  # Is attacker
-            if coords.src.row < coords.dst.row or coords.src.col < coords.dst.col:  # Unit is moving down -> illegal
-                return False
-        else:  # Is defender
-            if coords.src.row > coords.dst.row or coords.src.col > coords.dst.col:
-                return False
+        print(unit_type)
+        if (unit_type != UnitType.Tech and unit_type != UnitType.Virus):
+            if (player_type.value == 0):  # Is attacker
+                if coords.src.row < coords.dst.row or coords.src.col < coords.dst.col:  # Unit is moving down -> illegal
+                    return False
+            else:  # Is defender
+                if coords.src.row > coords.dst.row or coords.src.col > coords.dst.col:
+                    return False
         return True
 
     def perform_move(self, coords: CoordPair) -> Tuple[bool, str]:
