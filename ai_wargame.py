@@ -764,6 +764,25 @@ class Game:
 
     def initial_Board(self):
         return self.to_string()
+
+    def game_heuristic_e0(self, game: Game = None) -> int:
+        """
+        returns the worth of the units of the attacker substracted by the worth of the units of the defender
+        """
+
+        if game == None: game = self
+
+        unit_values: list[int] = [9999, 3, 3, 3, 3]
+
+        attacker_eval = 0
+        for (_, unit) in game.player_units(Player.Attacker):
+            attacker_eval += unit_values[unit.type.value]
+
+        defender_eval = 0
+        for (_, unit) in game.player_units(Player.Defender):
+            defender_eval += unit_values[unit.type.value]
+
+        return attacker_eval - defender_eval       
 ##############################################################################################################
 
 
