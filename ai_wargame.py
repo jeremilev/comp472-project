@@ -9,6 +9,7 @@ from typing import Tuple, TypeVar, Type, Iterable, ClassVar
 import random
 import requests
 import json
+import os
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
@@ -712,10 +713,12 @@ class Game:
 
             game_timeout = self.options.max_time
             num_of_turns = self.options.max_turns
-            filename = "gameTrace-" + \
+            FOLDERNAME = "gametrace"
+            filename =  "gameTrace-" + \
                 str(self.options.alpha_beta).lower() + "-" + \
                 str(game_timeout)+"-"+str(num_of_turns)+".txt"
-            f = open(filename, "w")
+            path = os.path.join(FOLDERNAME, filename)
+            f = open(path, "w")
 
             text = "Game Trace" + "\n" + \
                 "---------------------------------------------------------" + "\n"
