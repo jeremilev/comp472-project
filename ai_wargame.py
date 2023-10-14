@@ -10,6 +10,7 @@ import random
 import requests
 import json
 import os
+import math
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
@@ -238,7 +239,7 @@ class CoordPair:
 class Options:
     """Representation of the game options."""
     dim: int = 5
-    max_depth: int | None = 4
+    max_depth: int | None = 2 #TODO change back to 4
     min_depth: int | None = 2
     max_time: float | None = 5.0
     game_type: GameType = GameType.AttackerVsDefender
@@ -453,6 +454,9 @@ class Game:
                 self.record_move(coords, action="self-destruct")
                 self.perform_self_destruct(coords.src)
                 self.record_board()
+        
+            raise AssertionError("A valid move should always be handled.")
+        print("hier")
         return (False, "invalid move")
 
     def next_turn(self):
@@ -592,7 +596,8 @@ class Game:
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
-        (score, move, avg_depth) = self.random_move()
+        #(score, move, avg_depth) = self.random_move()
+        (score, move, avg_depth) = self.alphabeta_move()
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {score}")
@@ -768,7 +773,7 @@ class Game:
     def initial_Board(self):
         return self.to_string()
 
-    def game_heuristic_e0(self, game: Game = None) -> int:
+    def game_heuristic_e0(self, game: Game = None) -> float:
         """
         returns the worth of the units of the attacker substracted by the worth of the units of the defender
         """
@@ -786,6 +791,55 @@ class Game:
             defender_eval += unit_values[unit.type.value]
 
         return attacker_eval - defender_eval       
+
+    def alphabeta_move(self, node: Game = None, depth: int = None, alpha: float = None, beta: float = None, player: Player = None) -> Tuple[int, CoordPair | None, float]:
+        #TODO think about min depth
+        if node == None: node = self
+        if depth == None: depth = self.options.max_depth
+        if alpha == None: alpha = -math.inf
+        if beta == None: beta = math.inf
+        if player == None: player = self.next_player
+        
+        move_candidates = [move_candidate for move_candidate in node.move_candidates()]
+
+        if depth == 0 or move_candidates == []: #TODO or if node is terminal
+            return (node.game_heuristic_e0(), None, 0)
+        
+        if player == Player.Attacker:
+            v = -math.inf
+            performed_move = None
+            for possible_move in move_candidates:
+                child_node = node.clone()
+                child_node.perform_move(possible_move)
+
+                (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(child_node, depth -1, alpha, beta, Player.Defender)
+
+                if child_node_eval > v:
+                    v = child_node_eval
+                    performed_move = possible_move
+                    #v = max(v, child_node_eval)
+                alpha = max(alpha, v)
+                if beta <= alpha:
+                    break
+            return (v, performed_move, 0) #TODO handle average depth
+        else:
+            v = math.inf
+            performed_move = None
+            for possible_move in move_candidates:
+                child_node = node.clone()
+                child_node.perform_move(possible_move)
+
+                (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(child_node, depth -1, alpha, beta, Player.Attacker)
+
+                if child_node_eval < v:
+                    v = child_node_eval
+                    performed_move = possible_move
+                    #v = min(v, self.alphabeta(child_node, depth -1, alpha, beta, Player.Attacker))
+                beta = max(beta, v)
+                if beta <= alpha:
+                    break
+            return (v, performed_move, 0) #TODO handle average depth
+
 ##############################################################################################################
 
 
@@ -836,6 +890,12 @@ def main():
     while True:
         print()
         print(game)
+        print(game.is_valid_move(CoordPair(Coord(2, 4),Coord(3, 4))))
+        print(CoordPair(Coord(2, 4),Coord(3, 4)).to_string())
+        for move in game.move_candidates():
+            pass
+            #print(move)
+        #print(game.suggest_move())
 
         winner = game.has_winner()
         if winner is not None:
