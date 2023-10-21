@@ -239,7 +239,7 @@ class CoordPair:
 class Options:
     """Representation of the game options."""
     dim: int = 5
-    max_depth: int | None = 2 #TODO change back to 4
+    max_depth: int | None = 2  # TODO change back to 4
     min_depth: int | None = 2
     max_time: float | None = 5.0
     game_type: GameType = GameType.AttackerVsDefender
@@ -454,7 +454,7 @@ class Game:
                 self.record_move(coords, action="self-destruct")
                 self.perform_self_destruct(coords.src)
                 self.record_board()
-        
+
             raise AssertionError("A valid move should always be handled.")
         print("hier")
         return (False, "invalid move")
@@ -562,15 +562,14 @@ class Game:
 
     def has_winner(self) -> Player | None:
         """Check if the game is over and returns winner"""
-        if self.options.max_turns is not None and self.turns_played > self.options.max_turns:
+        if self.options.max_turns is not None and self.turns_played >= self.options.max_turns:
             return Player.Defender
-        elif self._attacker_has_ai:
+        if self._attacker_has_ai:
             if self._defender_has_ai:
                 return None
             else:
-                return Player.Attacker
-        elif self._defender_has_ai:
-            return Player.Defender
+                return Player.Attacker    
+        return Player.Defender
 
     def move_candidates(self) -> Iterable[CoordPair]:
         """Generate valid move candidates for the next player."""
@@ -596,7 +595,7 @@ class Game:
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
-        #(score, move, avg_depth) = self.random_move()
+        # (score, move, avg_depth) = self.random_move()
         (score, move, avg_depth) = self.alphabeta_move()
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
@@ -719,7 +718,7 @@ class Game:
             game_timeout = self.options.max_time
             num_of_turns = self.options.max_turns
             FOLDERNAME = "gametrace"
-            filename =  "gameTrace-" + \
+            filename = "gameTrace-" + \
                 str(self.options.alpha_beta).lower() + "-" + \
                 str(game_timeout)+"-"+str(num_of_turns)+".txt"
             path = os.path.join(FOLDERNAME, filename)
@@ -778,7 +777,8 @@ class Game:
         returns the worth of the units of the attacker substracted by the worth of the units of the defender
         """
 
-        if game == None: game = self
+        if game == None:
+            game = self
 
         unit_values: list[int] = [9999, 3, 3, 3, 3]
 
@@ -790,21 +790,59 @@ class Game:
         for (_, unit) in game.player_units(Player.Defender):
             defender_eval += unit_values[unit.type.value]
 
-        return attacker_eval - defender_eval       
+        return attacker_eval - defender_eval
 
-    def alphabeta_move(self, node: Game = None, depth: int = None, alpha: float = None, beta: float = None, player: Player = None) -> Tuple[int, CoordPair | None, float]:
-        #TODO think about min depth
-        if node == None: node = self
-        if depth == None: depth = self.options.max_depth
-        if alpha == None: alpha = -math.inf
-        if beta == None: beta = math.inf
-        if player == None: player = self.next_player
+    def game_heuristic_e1(self, game: Game = None) -> float:
+        """
+        1. scale end value by AI health since this is the condition to win or lose.
+        2. number of units player's Alive Units + number of opponent's Dead Units -> the greater the number, the better - it gives a sense of the presence on the board.
+        3. number 
+        4.
+        e(n) = 1. * (2.)
+        e(n) = AI-Health * (nbPlayerUnitsAlive + (6 - nbOpponentUnitsAlive)) +     
+    
         
-        move_candidates = [move_candidate for move_candidate in node.move_candidates()]
+        """
+        #Get game data
+        if game == None:
+            game = self
+        
+        #Iterate over the board
+        for item in self.board:
+            pass
+        
 
-        if depth == 0 or move_candidates == []: #TODO or if node is terminal
-            return (node.game_heuristic_e0(), None, 0)
-        
+    def game_heuristic_e2(self, game: Game = None) -> float:
+        """
+
+        """
+        return random.randint(-100,100)
+
+    def alphabeta_move(self, node: Game = None, depth: int = None, alpha: float = None, beta: float = None, player: Player = None, heuristic = None, pruning: bool = None) -> Tuple[int, CoordPair | None, float]:
+        """
+        """
+        # TODO think about min depth
+        if node == None:
+            node = self
+        if depth == None:
+            depth = self.options.max_depth
+        if alpha == None:
+            alpha = -math.inf
+        if beta == None:
+            beta = math.inf
+        if player == None:
+            player = self.next_player
+        if heuristic == None:
+            heuristic = self.game_heuristic_e0
+        if pruning == None:
+            pruning = True
+
+        move_candidates = [
+            move_candidate for move_candidate in node.move_candidates()]
+
+        if depth == 0 or move_candidates == []:  # TODO or if node is terminal
+            return (node.heuristic(), None, 0)
+
         if player == Player.Attacker:
             v = -math.inf
             performed_move = None
@@ -812,16 +850,19 @@ class Game:
                 child_node = node.clone()
                 child_node.perform_move(possible_move)
 
-                (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(child_node, depth -1, alpha, beta, Player.Defender)
+                (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(
+                    child_node, depth - 1, alpha, beta, Player.Defender)
 
                 if child_node_eval > v:
                     v = child_node_eval
                     performed_move = possible_move
-                    #v = max(v, child_node_eval)
+                    # v = max(v, child_node_eval)
                 alpha = max(alpha, v)
-                if beta <= alpha:
-                    break
-            return (v, performed_move, 0) #TODO handle average depth
+                if pruning:
+                    if beta <= alpha:
+                        break
+
+            return (v, performed_move, 0)  # TODO handle average depth
         else:
             v = math.inf
             performed_move = None
@@ -829,16 +870,18 @@ class Game:
                 child_node = node.clone()
                 child_node.perform_move(possible_move)
 
-                (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(child_node, depth -1, alpha, beta, Player.Attacker)
+                (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(
+                    child_node, depth - 1, alpha, beta, Player.Attacker)
 
                 if child_node_eval < v:
                     v = child_node_eval
                     performed_move = possible_move
-                    #v = min(v, self.alphabeta(child_node, depth -1, alpha, beta, Player.Attacker))
+                    # v = min(v, self.alphabeta(child_node, depth -1, alpha, beta, Player.Attacker))
                 beta = max(beta, v)
-                if beta <= alpha:
-                    break
-            return (v, performed_move, 0) #TODO handle average depth
+                if pruning:
+                    if beta <= alpha:
+                        break
+            return (v, performed_move, 0)  # TODO handle average depth
 
 ##############################################################################################################
 
@@ -848,6 +891,8 @@ def main():
     parser = argparse.ArgumentParser(
         prog='ai_wargame',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--alpha_beta', type=bool, default=True, help='determines if alpha-beta pruning is turned on or off')
+    parser.add_argument('--heuristic', type=int, default=0, help='heuristic applied: 0 = e0, 1 = e1, 2 = e2')
     parser.add_argument('--max_depth', type=int, help='maximum search depth')
     parser.add_argument('--max_time', type=float, help='maximum search time')
     parser.add_argument('--game_type', type=str, default="manual",
@@ -879,6 +924,10 @@ def main():
         options.broker = args.broker
     if args.max_turns is not None:
         options.max_turns = args.max_turns
+    if args.alpha_beta is not None:
+        options.alpha_beta = args.alpha_beta
+    if args.heuristic is not None:
+        options.heuristic = args.heuristic
 
     # create a new game
     game = Game(options=options)
@@ -890,12 +939,12 @@ def main():
     while True:
         print()
         print(game)
-        print(game.is_valid_move(CoordPair(Coord(2, 4),Coord(3, 4))))
-        print(CoordPair(Coord(2, 4),Coord(3, 4)).to_string())
+        print(game.is_valid_move(CoordPair(Coord(2, 4), Coord(3, 4))))
+        print(CoordPair(Coord(2, 4), Coord(3, 4)).to_string())
         for move in game.move_candidates():
             pass
-            #print(move)
-        #print(game.suggest_move())
+            # print(move)
+        # print(game.suggest_move())
 
         winner = game.has_winner()
         if winner is not None:
