@@ -303,12 +303,16 @@ def game_heuristic_e1(game: Game) -> float:
 
 def game_heuristic_e2(game: Game) -> float:
     """
-    evaluates the health of the attackers units substracted by the health of the defenders units
+    Higher value is best for Attacker, Lower value is best for Defender.
+    Result with higher value is best for Attacker, Lower value for defender.
     """
+    #Calculate the sum of health attacker unit's has at measured node.
     attacker_health = 0
     for (_, unit) in game.player_units(Player.Attacker):
         attacker_health += unit.health
+    #attacker_health = *attacker_health
 
+    #Calculate the sum of health defender unit's has at measured node.
     defender_health = 0
     for (_, unit) in game.player_units(Player.Defender):
         defender_health += unit.health
@@ -326,7 +330,8 @@ def game_heuristic_e1_idea_tim(game: Game) -> float:
     for (_, a_unit) in game.player_units(Player.Attacker):
         unit_strength = 0
         for (_, d_unit) in game.player_units(Player.Defender):
-            unit_strength += a_unit.damage_amount(
+
+            unit_strength += a_unit.damage_amount( 
                 d_unit) * a_unit.health - d_unit.damage_amount(a_unit) * d_unit.health
         attacker_unit_strength += unit_strength
 
@@ -883,9 +888,11 @@ class Game:
         if pruning == None:
             pruning = True
 
+        #Call function to generate list of candidate moves (child nodes).
         move_candidates = [
             move_candidate for move_candidate in node.move_candidates()]
-
+        
+        #Check if its leaf nodes and evaluate heuristics if so.
         if depth == 0 or node.has_winner():  # TODO or if node is terminal
             return (node.calc_heuristic(), None, 0)
 
@@ -897,6 +904,7 @@ class Game:
                 child_node.perform_move(possible_move, record_move=False)
                 child_node.next_turn()
 
+                #Recusive call to the next depth of current node (parent).
                 (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(
                     child_node, depth - 1, alpha, beta, Player.Defender)
 
@@ -925,7 +933,7 @@ class Game:
                     v = child_node_eval
                     performed_move = possible_move
                     # v = min(v, self.alphabeta(child_node, depth -1, alpha, beta, Player.Attacker))
-                beta = max(beta, v)
+                beta = min(beta, v)
                 if pruning:
                     if beta <= alpha:
                         break
