@@ -234,16 +234,18 @@ class CoordPair:
 
 ##############################################################################################################
 
+
 class Heuristic(Enum):
     e0 = 0
     e1 = 1
     e2 = 2
 
+
 @dataclass(slots=True)
 class Options:
     """Representation of the game options."""
     dim: int = 5
-    max_depth: int | None = 4  
+    max_depth: int | None = 4
     min_depth: int | None = 2
     max_time: float | None = 5.0
     game_type: GameType = GameType.AttackerVsDefender
@@ -264,6 +266,7 @@ class Stats:
 
 ##############################################################################################################
 
+
 def game_heuristic_e0(game: Game) -> float:
     """
     returns the worth of the units of the attacker substracted by the worth of the units of the defender
@@ -280,6 +283,7 @@ def game_heuristic_e0(game: Game) -> float:
 
     return attacker_eval - defender_eval
 
+
 def game_heuristic_e1(game: Game) -> float:
     """
     1. scale end value by AI health since this is the condition to win or lose.
@@ -289,28 +293,28 @@ def game_heuristic_e1(game: Game) -> float:
     e(n) = 1. * (2.)
     e(n) = AI-Health * (nbPlayerUnitsAlive + (6 - nbOpponentUnitsAlive)) +     
 
-    
+
     """
-    
-    #Iterate over the board
+
+    # Iterate over the board
     for item in game.board:
         pass
-        
+
 
 def game_heuristic_e2(game: Game) -> float:
     """
     evaluates the health of the attackers units substracted by the health of the defenders units
     """
     attacker_health = 0
-    for (_ , unit) in game.player_units(Player.Attacker):
+    for (_, unit) in game.player_units(Player.Attacker):
         attacker_health += unit.health
 
     defender_health = 0
-    for (_ , unit) in game.player_units(Player.Defender):
+    for (_, unit) in game.player_units(Player.Defender):
         defender_health += unit.health
 
     return float(attacker_health-defender_health)
-    return random.randint(-100,100)
+
 
 def game_heuristic_e1_idea_tim(game: Game) -> float:
     """
@@ -319,13 +323,15 @@ def game_heuristic_e1_idea_tim(game: Game) -> float:
     Uses the health of the unit a mulitplier.
     """
     attacker_unit_strength = 0
-    for (_ , a_unit) in game.player_units(Player.Attacker):
+    for (_, a_unit) in game.player_units(Player.Attacker):
         unit_strength = 0
-        for (_ , d_unit) in game.player_units(Player.Defender):
-            unit_strength += a_unit.damage_amount(d_unit) * a_unit.health - d_unit.damage_amount(a_unit) * d_unit.health
+        for (_, d_unit) in game.player_units(Player.Defender):
+            unit_strength += a_unit.damage_amount(
+                d_unit) * a_unit.health - d_unit.damage_amount(a_unit) * d_unit.health
         attacker_unit_strength += unit_strength
 
     return float(attacker_unit_strength)
+
 
 @dataclass(slots=True)
 class Game:
@@ -450,7 +456,8 @@ class Game:
         if unit_destination != None:
             if unit_destination.player == self.next_player:
                 return bool(self.is_repairable(coords))
-            else: return True
+            else:
+                return True
 
         # Verify that movement is in the right direction
         if (unit_type != UnitType.Tech and unit_type != UnitType.Virus):
@@ -479,14 +486,15 @@ class Game:
             if adjacent_unit != None:
                 self.mod_health(adjacent_coord, -2)
 
-    def perform_move(self, coords: CoordPair, record_move = True) -> Tuple[bool, str]:
+    def perform_move(self, coords: CoordPair, record_move=True) -> Tuple[bool, str]:
         """Validate and perform a move expressed as a CoordPair."""
         if self.is_valid_move(coords):
             dst_unit = self.get(coords.dst)
 
             # if action = move
             if dst_unit == None:
-                if record_move: self.record_move(coords, action="move")
+                if record_move:
+                    self.record_move(coords, action="move")
                 self.set(coords.dst, self.get(coords.src))
                 self.set(coords.src, None)
                 self.record_board()
@@ -494,7 +502,8 @@ class Game:
 
             # if action = attack
             if dst_unit.player != self.next_player:
-                if record_move: self.record_move(coords, action="attack")
+                if record_move:
+                    self.record_move(coords, action="attack")
                 self.attack(coords)
                 self.record_board()
                 return (True, "")  # TODO check if return is correct
@@ -504,7 +513,8 @@ class Game:
 
                 # if action = self_destruct
                 if coords.src == coords.dst:
-                    if record_move: self.record_move(coords, action="self-destruct")
+                    if record_move:
+                        self.record_move(coords, action="self-destruct")
                     self.perform_self_destruct(coords.src)
                     self.record_board()
                     return (True, "")  # TODO check if return is correct
@@ -514,7 +524,8 @@ class Game:
                     restored_health = self.is_repairable(coords)
                     if restored_health:
                         self.mod_health(coords.dst, restored_health)
-                        if record_move: self.record_move(coords, action="repair")
+                        if record_move:
+                            self.record_move(coords, action="repair")
                         self.record_board()
                         return (True, "")  # TODO check if return is correct
                     else:
@@ -522,7 +533,8 @@ class Game:
 
             # if action = self_destruct
             if coords.src == coords.dst:
-                if record_move: self.record_move(coords, action="self-destruct")
+                if record_move:
+                    self.record_move(coords, action="self-destruct")
                 self.perform_self_destruct(coords.src)
                 self.record_board()
 
@@ -638,7 +650,7 @@ class Game:
             if self._defender_has_ai:
                 return None
             else:
-                return Player.Attacker    
+                return Player.Attacker
         return Player.Defender
 
     def move_candidates(self) -> Iterable[CoordPair]:
@@ -789,7 +801,7 @@ class Game:
 
             game_timeout = self.options.max_time
             num_of_turns = self.options.max_turns
-            game_nr = random.randint(1,1000)
+            game_nr = random.randint(1, 1000)
             FOLDERNAME = "gametrace"
             filename = f"gameTrace{game_nr}-" + \
                 str(self.options.alpha_beta).lower() + "-" + \
@@ -846,12 +858,11 @@ class Game:
         return self.to_string()
 
     def calc_heuristic(self) -> float:
-        print("heuristic",self.options.heuristic.value)
-        if self.options.heuristic == Heuristic.e0:
+        if self.options.heuristic == 0:
             return game_heuristic_e0(self)
-        if self.options.heuristic == Heuristic.e1:
+        if self.options.heuristic == 1:
             return game_heuristic_e1(self)
-        if self.options.heuristic == Heuristic.e2:
+        if self.options.heuristic == 2:
             return game_heuristic_e2(self)
         raise AssertionError("There should always be a selected heuristic.")
 
@@ -928,8 +939,10 @@ def main():
     parser = argparse.ArgumentParser(
         prog='ai_wargame',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--alpha_beta', type=bool, default=True, help='determines if alpha-beta pruning is turned on or off')
-    parser.add_argument('--heuristic', type=int, default=0, help='heuristic applied: 0 = e0, 1 = e1, 2 = e2')
+    parser.add_argument('--alpha_beta', type=bool, default=True,
+                        help='determines if alpha-beta pruning is turned on or off')
+    parser.add_argument('--heuristic', type=int, default=0,
+                        help='heuristic applied: 0 = e0, 1 = e1, 2 = e2')
     parser.add_argument('--max_depth', type=int, help='maximum search depth')
     parser.add_argument('--max_time', type=float, help='maximum search time')
     parser.add_argument('--game_type', type=str, default="manual",
@@ -978,7 +991,7 @@ def main():
         print(game)
         print(len([move for move in game.move_candidates()]))
         for move in game.move_candidates():
-            #print(move)
+            # print(move)
             pass
         print(game.suggest_move())
 
