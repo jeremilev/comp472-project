@@ -234,6 +234,10 @@ class CoordPair:
 
 ##############################################################################################################
 
+class Heuristic(Enum):
+    e0 = 0
+    e1 = 1
+    e2 = 2
 
 @dataclass(slots=True)
 class Options:
@@ -247,6 +251,7 @@ class Options:
     max_turns: int | None = 100
     randomize_moves: bool = True
     broker: str | None = None
+    heuristic: Heuristic = Heuristic.e0
 
 ##############################################################################################################
 
@@ -259,6 +264,68 @@ class Stats:
 
 ##############################################################################################################
 
+def game_heuristic_e0(game: Game) -> float:
+    """
+    returns the worth of the units of the attacker substracted by the worth of the units of the defender
+    """
+    unit_values: list[int] = [9999, 3, 3, 3, 3]
+
+    attacker_eval = 0
+    for (_, unit) in game.player_units(Player.Attacker):
+        attacker_eval += unit_values[unit.type.value]
+
+    defender_eval = 0
+    for (_, unit) in game.player_units(Player.Defender):
+        defender_eval += unit_values[unit.type.value]
+
+    return attacker_eval - defender_eval
+
+def game_heuristic_e1(game: Game) -> float:
+    """
+    1. scale end value by AI health since this is the condition to win or lose.
+    2. number of units player's Alive Units + number of opponent's Dead Units -> the greater the number, the better - it gives a sense of the presence on the board.
+    3. number 
+    4.
+    e(n) = 1. * (2.)
+    e(n) = AI-Health * (nbPlayerUnitsAlive + (6 - nbOpponentUnitsAlive)) +     
+
+    
+    """
+    
+    #Iterate over the board
+    for item in game.board:
+        pass
+        
+
+def game_heuristic_e2(game: Game) -> float:
+    """
+    evaluates the health of the attackers units substracted by the health of the defenders units
+    """
+    attacker_health = 0
+    for (_ , unit) in game.player_units(Player.Attacker):
+        attacker_health += unit.health
+
+    defender_health = 0
+    for (_ , unit) in game.player_units(Player.Defender):
+        defender_health += unit.health
+
+    return float(attacker_health-defender_health)
+    return random.randint(-100,100)
+
+def game_heuristic_e1_idea_tim(game: Game) -> float:
+    """
+    evaluates the strength of the attackers units in comparison to the strength of the defenders units. 
+    Sum of the potential damage a unit can cause - Sum of potential damage it can receives.
+    Uses the health of the unit a mulitplier.
+    """
+    attacker_unit_strength = 0
+    for (_ , a_unit) in game.player_units(Player.Attacker):
+        unit_strength = 0
+        for (_ , d_unit) in game.player_units(Player.Defender):
+            unit_strength += a_unit.damage_amount(d_unit) * a_unit.health - d_unit.damage_amount(a_unit) * d_unit.health
+        attacker_unit_strength += unit_strength
+
+    return float(attacker_unit_strength)
 
 @dataclass(slots=True)
 class Game:
@@ -778,53 +845,17 @@ class Game:
     def initial_Board(self):
         return self.to_string()
 
-    def game_heuristic_e0(self, game: Game = None) -> float:
-        """
-        returns the worth of the units of the attacker substracted by the worth of the units of the defender
-        """
+    def calc_heuristic(self) -> float:
+        print("heuristic",self.options.heuristic.value)
+        if self.options.heuristic == Heuristic.e0:
+            return game_heuristic_e0(self)
+        if self.options.heuristic == Heuristic.e1:
+            return game_heuristic_e1(self)
+        if self.options.heuristic == Heuristic.e2:
+            return game_heuristic_e2(self)
+        raise AssertionError("There should always be a selected heuristic.")
 
-        if game == None:
-            game = self
-
-        unit_values: list[int] = [9999, 3, 3, 3, 3]
-
-        attacker_eval = 0
-        for (_, unit) in game.player_units(Player.Attacker):
-            attacker_eval += unit_values[unit.type.value]
-
-        defender_eval = 0
-        for (_, unit) in game.player_units(Player.Defender):
-            defender_eval += unit_values[unit.type.value]
-
-        return attacker_eval - defender_eval
-
-    def game_heuristic_e1(self, game: Game = None) -> float:
-        """
-        1. scale end value by AI health since this is the condition to win or lose.
-        2. number of units player's Alive Units + number of opponent's Dead Units -> the greater the number, the better - it gives a sense of the presence on the board.
-        3. number 
-        4.
-        e(n) = 1. * (2.)
-        e(n) = AI-Health * (nbPlayerUnitsAlive + (6 - nbOpponentUnitsAlive)) +     
-    
-        
-        """
-        #Get game data
-        if game == None:
-            game = self
-        
-        #Iterate over the board
-        for item in self.board:
-            pass
-        
-
-    def game_heuristic_e2(self, game: Game = None) -> float:
-        """
-
-        """
-        return random.randint(-100,100)
-
-    def alphabeta_move(self, node: Game = None, depth: int = None, alpha: float = None, beta: float = None, player: Player = None, heuristic = None, pruning: bool = None) -> Tuple[int, CoordPair | None, float]:
+    def alphabeta_move(self, node: Game = None, depth: int = None, alpha: float = None, beta: float = None, player: Player = None, pruning: bool = None) -> Tuple[int, CoordPair | None, float]:
         """
         """
         # TODO think about min depth
@@ -838,8 +869,6 @@ class Game:
             beta = math.inf
         if player == None:
             player = self.next_player
-        if heuristic == None:
-            heuristic = self.game_heuristic_e0
         if pruning == None:
             pruning = True
 
@@ -847,7 +876,7 @@ class Game:
             move_candidate for move_candidate in node.move_candidates()]
 
         if depth == 0 or node.has_winner():  # TODO or if node is terminal
-            return (node.game_heuristic_e0(), None, 0)
+            return (node.calc_heuristic(), None, 0)
 
         if player == Player.Attacker:
             v = -math.inf
@@ -932,10 +961,10 @@ def main():
         options.broker = args.broker
     if args.max_turns is not None:
         options.max_turns = args.max_turns
-    #if args.alpha_beta is not None:
-    #    options.alpha_beta = args.alpha_beta
-    #if args.heuristic is not None:
-    #    options.heuristic = args.heuristic
+    if args.alpha_beta is not None:
+        options.alpha_beta = args.alpha_beta
+    if args.heuristic is not None:
+        options.heuristic = args.heuristic
 
     # create a new game
     game = Game(options=options)
