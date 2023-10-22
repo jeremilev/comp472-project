@@ -303,19 +303,33 @@ def game_heuristic_e1(game: Game) -> float:
 
 def game_heuristic_e2(game: Game) -> float:
     """
-    Higher value is best for Attacker, Lower value is best for Defender.
+    Evaluating Attacker's vs Defender's units total health pool.
     Result with higher value is best for Attacker, Lower value for defender.
+    player's AI health is used as modifier should the move eliminate an AI befor
+    all other units. 
     """
     #Calculate the sum of health attacker unit's has at measured node.
     attacker_health = 0
+    attacker_ai_health = 0
     for (_, unit) in game.player_units(Player.Attacker):
+        #Get AI's health
+        if str(unit.type) == "UnitType.AI":
+            attacker_ai_health = unit.health
         attacker_health += unit.health
-    #attacker_health = *attacker_health
+    #Adding modifier
+    attacker_health = attacker_ai_health * attacker_health
+
 
     #Calculate the sum of health defender unit's has at measured node.
     defender_health = 0
+    defender_ai_health = 0
     for (_, unit) in game.player_units(Player.Defender):
+        #Get AI's health
+        if str(unit.type) == "UnitType.AI":
+            defender_ai_health = unit.health
         defender_health += unit.health
+    #Adding modifier
+    defender_health = defender_ai_health * defender_health
 
     return float(attacker_health-defender_health)
 
