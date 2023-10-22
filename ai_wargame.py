@@ -263,7 +263,7 @@ class Stats:
     """Representation of the global game statistics."""
     evaluations_per_depth: dict[int, int] = field(default_factory=dict)
     total_seconds: float = 0.0
-
+    cumulative_evals: int = 0
 ##############################################################################################################
 
 
@@ -308,27 +308,26 @@ def game_heuristic_e2(game: Game) -> float:
     player's AI health is used as modifier should the move eliminate an AI befor
     all other units. 
     """
-    #Calculate the sum of health attacker unit's has at measured node.
+    # Calculate the sum of health attacker unit's has at measured node.
     attacker_health = 0
     attacker_ai_health = 0
     for (_, unit) in game.player_units(Player.Attacker):
-        #Get AI's health
+        # Get AI's health
         if str(unit.type) == "UnitType.AI":
             attacker_ai_health = unit.health
         attacker_health += unit.health
-    #Adding modifier
+    # Adding modifier
     attacker_health = attacker_ai_health * attacker_health
 
-
-    #Calculate the sum of health defender unit's has at measured node.
+    # Calculate the sum of health defender unit's has at measured node.
     defender_health = 0
     defender_ai_health = 0
     for (_, unit) in game.player_units(Player.Defender):
-        #Get AI's health
+        # Get AI's health
         if str(unit.type) == "UnitType.AI":
             defender_ai_health = unit.health
         defender_health += unit.health
-    #Adding modifier
+    # Adding modifier
     defender_health = defender_ai_health * defender_health
 
     return float(attacker_health-defender_health)
@@ -345,7 +344,7 @@ def game_heuristic_e1_idea_tim(game: Game) -> float:
         unit_strength = 0
         for (_, d_unit) in game.player_units(Player.Defender):
 
-            unit_strength += a_unit.damage_amount( 
+            unit_strength += a_unit.damage_amount(
                 d_unit) * a_unit.health - d_unit.damage_amount(a_unit) * d_unit.health
         attacker_unit_strength += unit_strength
 
@@ -701,12 +700,24 @@ class Game:
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {score}")
-        print(f"Average recursive depth: {avg_depth:0.1f}")
+
+        # Prints the number of evaluations made per depth
         print(f"Evals per depth: ", end='')
-        for k in sorted(self.stats.evaluations_per_depth.keys()):
-            print(f"{k}:{self.stats.evaluations_per_depth[k]} ", end='')
+        c = 1
+        for k in sorted(self.stats.evaluations_per_depth.keys(), reverse=True):
+            print(f"{c}:{self.stats.evaluations_per_depth[k]} ", end='')
+            c += 1
         print()
         total_evals = sum(self.stats.evaluations_per_depth.values())
+
+        # Clear evaluations_per_depth stats after every turn
+        self.stats.evaluations_per_depth.clear()
+
+        # Add total number of evaluations of that turn to the total number of evaluations during the game
+        self.stats.cumulative_evals += total_evals
+        print(f"Cumulative evals: {self.stats.cumulative_evals}")
+
+        # Prints number of evaluations performed
         if self.stats.total_seconds > 0:
             print(
                 f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
@@ -902,11 +913,11 @@ class Game:
         if pruning == None:
             pruning = True
 
-        #Call function to generate list of candidate moves (child nodes).
+        # Call function to generate list of candidate moves (child nodes).
         move_candidates = [
             move_candidate for move_candidate in node.move_candidates()]
-        
-        #Check if its leaf nodes and evaluate heuristics if so.
+
+        # Check if its leaf nodes and evaluate heuristics if so.
         if depth == 0 or node.has_winner():  # TODO or if node is terminal
             return (node.calc_heuristic(), None, 0)
 
@@ -918,7 +929,7 @@ class Game:
                 child_node.perform_move(possible_move, record_move=False)
                 child_node.next_turn()
 
-                #Recusive call to the next depth of current node (parent).
+                # Recusive call to the next depth of current node (parent).
                 (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(
                     child_node, depth - 1, alpha, beta, Player.Defender)
 
@@ -930,7 +941,10 @@ class Game:
                 if pruning:
                     if beta <= alpha:
                         break
-
+            if depth in self.stats.evaluations_per_depth:
+                self.stats.evaluations_per_depth[depth] += len(move_candidates)
+            else:
+                self.stats.evaluations_per_depth[depth] = len(move_candidates)
             return (v, performed_move, 0)  # TODO handle average depth
         else:
             v = math.inf
@@ -951,6 +965,11 @@ class Game:
                 if pruning:
                     if beta <= alpha:
                         break
+            # Accumulates number of possible moves at every depth for all branches
+            if depth in self.stats.evaluations_per_depth:
+                self.stats.evaluations_per_depth[depth] += len(move_candidates)
+            else:
+                self.stats.evaluations_per_depth[depth] = len(move_candidates)
             return (v, performed_move, 0)  # TODO handle average depth
 
 ##############################################################################################################
