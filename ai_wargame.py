@@ -239,7 +239,7 @@ class CoordPair:
 class Options:
     """Representation of the game options."""
     dim: int = 5
-    max_depth: int | None = 2  # TODO change back to 4
+    max_depth: int | None = 4  
     min_depth: int | None = 2
     max_time: float | None = 5.0
     game_type: GameType = GameType.AttackerVsDefender
@@ -381,7 +381,9 @@ class Game:
 
         # attack or repairing a unit on an adjacent field is always a valid move
         if unit_destination != None:
-            return True
+            if unit_destination.player == self.next_player:
+                return bool(self.is_repairable(coords))
+            else: return True
 
         # Verify that movement is in the right direction
         if (unit_type != UnitType.Tech and unit_type != UnitType.Virus):
@@ -410,14 +412,14 @@ class Game:
             if adjacent_unit != None:
                 self.mod_health(adjacent_coord, -2)
 
-    def perform_move(self, coords: CoordPair) -> Tuple[bool, str]:
+    def perform_move(self, coords: CoordPair, record_move = True) -> Tuple[bool, str]:
         """Validate and perform a move expressed as a CoordPair."""
         if self.is_valid_move(coords):
             dst_unit = self.get(coords.dst)
 
             # if action = move
             if dst_unit == None:
-                self.record_move(coords, action="move")
+                if record_move: self.record_move(coords, action="move")
                 self.set(coords.dst, self.get(coords.src))
                 self.set(coords.src, None)
                 self.record_board()
@@ -425,7 +427,7 @@ class Game:
 
             # if action = attack
             if dst_unit.player != self.next_player:
-                self.record_move(coords, action="attack")
+                if record_move: self.record_move(coords, action="attack")
                 self.attack(coords)
                 self.record_board()
                 return (True, "")  # TODO check if return is correct
@@ -435,15 +437,17 @@ class Game:
 
                 # if action = self_destruct
                 if coords.src == coords.dst:
-                    self.record_move(coords, action="self-destruct")
+                    if record_move: self.record_move(coords, action="self-destruct")
                     self.perform_self_destruct(coords.src)
                     self.record_board()
                     return (True, "")  # TODO check if return is correct
 
                 # if action = repair
                 else:
-                    if self.repair(coords):
-                        self.record_move(coords, action="repair")
+                    restored_health = self.is_repairable(coords)
+                    if restored_health:
+                        self.mod_health(coords.dst, restored_health)
+                        if record_move: self.record_move(coords, action="repair")
                         self.record_board()
                         return (True, "")  # TODO check if return is correct
                     else:
@@ -451,12 +455,11 @@ class Game:
 
             # if action = self_destruct
             if coords.src == coords.dst:
-                self.record_move(coords, action="self-destruct")
+                if record_move: self.record_move(coords, action="self-destruct")
                 self.perform_self_destruct(coords.src)
                 self.record_board()
 
             raise AssertionError("A valid move should always be handled.")
-        print("hier")
         return (False, "invalid move")
 
     def next_turn(self):
@@ -672,12 +675,14 @@ class Game:
         self.mod_health(coords.dst, -attack_damage)
         self.mod_health(coords.src, -self_damage)
 
-    def repair(self, coords: CoordPair) -> bool:
+    def is_repairable(self, coords: CoordPair) -> int:
         """lets a unit on one coordinate repair a unit on another. Requires pre-check if repair is possible. 
         Returns if repair was successful."""
         repairing_unit = self.get(coords.src)
         target_unit = self.get(coords.dst)
         restored_health = repairing_unit.repair_amount(target_unit)
+        # print(restored_health, "restored health")
+        return restored_health
         if restored_health == 0:
             return False  # if the health change is 0, it is not a valid move
         self.mod_health(coords.dst, restored_health)
@@ -717,8 +722,9 @@ class Game:
 
             game_timeout = self.options.max_time
             num_of_turns = self.options.max_turns
+            game_nr = random.randint(1,1000)
             FOLDERNAME = "gametrace"
-            filename = "gameTrace-" + \
+            filename = f"gameTrace{game_nr}-" + \
                 str(self.options.alpha_beta).lower() + "-" + \
                 str(game_timeout)+"-"+str(num_of_turns)+".txt"
             path = os.path.join(FOLDERNAME, filename)
@@ -840,15 +846,16 @@ class Game:
         move_candidates = [
             move_candidate for move_candidate in node.move_candidates()]
 
-        if depth == 0 or move_candidates == []:  # TODO or if node is terminal
-            return (node.heuristic(), None, 0)
+        if depth == 0 or node.has_winner():  # TODO or if node is terminal
+            return (node.game_heuristic_e0(), None, 0)
 
         if player == Player.Attacker:
             v = -math.inf
             performed_move = None
             for possible_move in move_candidates:
                 child_node = node.clone()
-                child_node.perform_move(possible_move)
+                child_node.perform_move(possible_move, record_move=False)
+                child_node.next_turn()
 
                 (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(
                     child_node, depth - 1, alpha, beta, Player.Defender)
@@ -868,7 +875,8 @@ class Game:
             performed_move = None
             for possible_move in move_candidates:
                 child_node = node.clone()
-                child_node.perform_move(possible_move)
+                child_node.perform_move(possible_move, record_move=False)
+                child_node.next_turn()
 
                 (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(
                     child_node, depth - 1, alpha, beta, Player.Attacker)
@@ -924,10 +932,10 @@ def main():
         options.broker = args.broker
     if args.max_turns is not None:
         options.max_turns = args.max_turns
-    if args.alpha_beta is not None:
-        options.alpha_beta = args.alpha_beta
-    if args.heuristic is not None:
-        options.heuristic = args.heuristic
+    #if args.alpha_beta is not None:
+    #    options.alpha_beta = args.alpha_beta
+    #if args.heuristic is not None:
+    #    options.heuristic = args.heuristic
 
     # create a new game
     game = Game(options=options)
@@ -939,12 +947,11 @@ def main():
     while True:
         print()
         print(game)
-        print(game.is_valid_move(CoordPair(Coord(2, 4), Coord(3, 4))))
-        print(CoordPair(Coord(2, 4), Coord(3, 4)).to_string())
+        print(len([move for move in game.move_candidates()]))
         for move in game.move_candidates():
+            #print(move)
             pass
-            # print(move)
-        # print(game.suggest_move())
+        print(game.suggest_move())
 
         winner = game.has_winner()
         if winner is not None:
