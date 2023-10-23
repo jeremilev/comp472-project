@@ -2,6 +2,7 @@ from __future__ import annotations
 import argparse
 import copy
 from datetime import datetime
+from datetime import timedelta
 from enum import Enum
 from dataclasses import dataclass, field
 from time import sleep
@@ -9,6 +10,8 @@ from typing import Tuple, TypeVar, Type, Iterable, ClassVar
 import random
 import requests
 import json
+import os
+import math
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
@@ -233,6 +236,12 @@ class CoordPair:
 ##############################################################################################################
 
 
+class Heuristic(Enum):
+    e0 = 0
+    e1 = 1
+    e2 = 2
+
+
 @dataclass(slots=True)
 class Options:
     """Representation of the game options."""
@@ -245,6 +254,7 @@ class Options:
     max_turns: int | None = 100
     randomize_moves: bool = True
     broker: str | None = None
+    heuristic: Heuristic = Heuristic.e0
 
 ##############################################################################################################
 
@@ -254,8 +264,125 @@ class Stats:
     """Representation of the global game statistics."""
     evaluations_per_depth: dict[int, int] = field(default_factory=dict)
     total_seconds: float = 0.0
-
+    cumulative_evals: int = 0
+    timer: datetime = None
 ##############################################################################################################
+
+
+def game_heuristic_e0(game: Game) -> float:
+    """
+    returns the worth of the units of the attacker substracted by the worth of the units of the defender
+    """
+    unit_values: list[int] = [9999, 3, 3, 3, 3]
+
+    attacker_eval = 0
+    for (_, unit) in game.player_units(Player.Attacker):
+        attacker_eval += unit_values[unit.type.value]
+
+    defender_eval = 0
+    for (_, unit) in game.player_units(Player.Defender):
+        defender_eval += unit_values[unit.type.value]
+
+    return attacker_eval - defender_eval
+
+
+def game_heuristic_e1(game: Game) -> float:
+    """
+    This heuristic evaluates:
+     1. the number of ennemy units near the respective player's AI
+     2. If a Virus unit is close to the defender AI, adding a large positive number to the heuristic.
+     3. If a Virus unit is close to Tech unit, a negative number is added
+     4. If a Virus unit is close to Program unit, a positive number is added
+    """
+
+    ennemies_near_AI = 0
+    virus_att_AI = 0
+    virus_near_Tech = 0
+    virus_near_program = 0
+    for (coords, unit) in game.player_units(Player.Attacker):
+        if unit.type.value == 0:
+            in_near_range_of_AI = list([x for x in coords.iter_range(2)])
+            for i in in_near_range_of_AI:
+                if game.get(i) is not None:
+                    if game.get(i).player.name != "Attacker":
+                        ennemies_near_AI += 1
+        if unit.type.value == 2:
+            possible_1_shot = list(
+                [x for x in coords.iter_adjacent_with_diagonal()])
+            for i in possible_1_shot:
+                if game.get(i) is not None:
+                    if game.get(i).player.name != "Attacker" and game.get(i).type.value == 0:
+                        virus_att_AI = 1000
+                    if game.get(i).player.name != "Attacker" and game.get(i).type.value == 1:
+                        virus_near_Tech = -50
+                    if game.get(i).player.name != "Attacker" and game.get(i).type.value == 3:
+                        virus_near_program += 25
+
+    ennemies_near_def_AI = 0
+    ennemies_long_range_def_AI = 0
+    for (coords, unit) in game.player_units(Player.Defender):
+        if unit.type.value == 0:
+            in_range_of_AI = list([x for x in coords.iter_range(2)])
+            for i in in_range_of_AI:
+                if game.get(i) is not None:
+                    if game.get(i).player.name != "Defender":
+                        ennemies_near_def_AI += 1
+            in_long_range_of_AI = list([x for x in coords.iter_range(3)])
+            for i in in_long_range_of_AI:
+                if game.get(i) is not None:
+                    if game.get(i).player.name != "Defender":
+                        ennemies_long_range_def_AI += 1
+    e2_score = game_heuristic_e2(game)
+
+    return e2_score + 5*(ennemies_near_AI - ennemies_near_def_AI) + ennemies_long_range_def_AI + virus_att_AI + virus_near_program
+
+
+def game_heuristic_e2(game: Game) -> float:
+    """
+    Evaluating score based on Attacker's vs Defender's units total health pool.
+    Result with higher value is best for Attacker, Lower value for defender.
+    Modifiers are used to influence decisions.
+    """
+
+    ai_mod = 1000  # Prioritize AI's safety.
+    # Low value to avoid attacking Firewalls if possible or use it more by defender.
+    firewall_mod = 1
+    program_mod = 3  # Average unit but capable even against Virus/Tech
+    other_mod = 5  # For Virus and Tech
+    attacker_health = 0
+    # Calculate the sum of health attacker unit's has at measured node.
+    for (_, unit) in game.player_units(Player.Attacker):
+        # Get AI's health
+        if str(unit.type) == "UnitType.AI":
+            attacker_health += unit.health * ai_mod
+        # Get Firewall's health
+        elif str(unit.type) == "UnitType.Firewall":
+            attacker_health += unit.health * firewall_mod
+        # Get Program's health
+        elif str(unit.type) == "UnitType.Program":
+            attacker_health += unit.health * program_mod
+        # Get Virus and Tech's health
+        else:
+            attacker_health += unit.health * other_mod
+
+    defender_health = 0
+    # Calculate the sum of health defender unit's has at measured node.
+    for (_, unit) in game.player_units(Player.Defender):
+        # Get AI's health
+        if str(unit.type) == "UnitType.AI":
+            defender_health += unit.health * ai_mod
+        # Get Firewall's health
+        elif str(unit.type) == "UnitType.Firewall":
+            defender_health += unit.health * firewall_mod
+        # Get Program's health
+        elif str(unit.type) == "UnitType.Program":
+            defender_health += unit.health * program_mod
+        # Get Program, Virus and Tech's health
+        else:
+            defender_health += unit.health * other_mod
+
+    # Returning evaluation score of node
+    return float(attacker_health-defender_health)
 
 
 @dataclass(slots=True)
@@ -379,7 +506,10 @@ class Game:
 
         # attack or repairing a unit on an adjacent field is always a valid move
         if unit_destination != None:
-            return True
+            if unit_destination.player == self.next_player:
+                return bool(self.is_repairable(coords))
+            else:
+                return True
 
         # Verify that movement is in the right direction
         if (unit_type != UnitType.Tech and unit_type != UnitType.Virus):
@@ -408,14 +538,15 @@ class Game:
             if adjacent_unit != None:
                 self.mod_health(adjacent_coord, -2)
 
-    def perform_move(self, coords: CoordPair) -> Tuple[bool, str]:
+    def perform_move(self, coords: CoordPair, record_move=True) -> Tuple[bool, str]:
         """Validate and perform a move expressed as a CoordPair."""
         if self.is_valid_move(coords):
             dst_unit = self.get(coords.dst)
 
             # if action = move
             if dst_unit == None:
-                self.record_move(coords, action="move")
+                if record_move:
+                    self.record_move(coords, action="move")
                 self.set(coords.dst, self.get(coords.src))
                 self.set(coords.src, None)
                 self.record_board()
@@ -423,7 +554,8 @@ class Game:
 
             # if action = attack
             if dst_unit.player != self.next_player:
-                self.record_move(coords, action="attack")
+                if record_move:
+                    self.record_move(coords, action="attack")
                 self.attack(coords)
                 self.record_board()
                 return (True, "")  # TODO check if return is correct
@@ -433,15 +565,19 @@ class Game:
 
                 # if action = self_destruct
                 if coords.src == coords.dst:
-                    self.record_move(coords, action="self-destruct")
+                    if record_move:
+                        self.record_move(coords, action="self-destruct")
                     self.perform_self_destruct(coords.src)
                     self.record_board()
                     return (True, "")  # TODO check if return is correct
 
                 # if action = repair
                 else:
-                    if self.repair(coords):
-                        self.record_move(coords, action="repair")
+                    restored_health = self.is_repairable(coords)
+                    if restored_health:
+                        self.mod_health(coords.dst, restored_health)
+                        if record_move:
+                            self.record_move(coords, action="repair")
                         self.record_board()
                         return (True, "")  # TODO check if return is correct
                     else:
@@ -449,9 +585,12 @@ class Game:
 
             # if action = self_destruct
             if coords.src == coords.dst:
-                self.record_move(coords, action="self-destruct")
+                if record_move:
+                    self.record_move(coords, action="self-destruct")
                 self.perform_self_destruct(coords.src)
                 self.record_board()
+
+            raise AssertionError("A valid move should always be handled.")
         return (False, "invalid move")
 
     def next_turn(self):
@@ -557,15 +696,14 @@ class Game:
 
     def has_winner(self) -> Player | None:
         """Check if the game is over and returns winner"""
-        if self.options.max_turns is not None and self.turns_played > self.options.max_turns:
+        if self.options.max_turns is not None and self.turns_played >= self.options.max_turns:
             return Player.Defender
-        elif self._attacker_has_ai:
+        if self._attacker_has_ai:
             if self._defender_has_ai:
                 return None
             else:
                 return Player.Attacker
-        elif self._defender_has_ai:
-            return Player.Defender
+        return Player.Defender
 
     def move_candidates(self) -> Iterable[CoordPair]:
         """Generate valid move candidates for the next player."""
@@ -589,18 +727,50 @@ class Game:
             return (0, None, 0)
 
     def suggest_move(self) -> CoordPair | None:
-        """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
+        """Suggest the next move using minimax alpha beta."""
         start_time = datetime.now()
-        (score, move, avg_depth) = self.random_move()
+        self.stats.timer = datetime.now()
+        # (score, move, avg_depth) = self.random_move()
+        (score, move, avg_depth) = self.alphabeta_move()
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {score}")
-        print(f"Average recursive depth: {avg_depth:0.1f}")
+
+        # Prints the number of evaluations made per depth
         print(f"Evals per depth: ", end='')
-        for k in sorted(self.stats.evaluations_per_depth.keys()):
-            print(f"{k}:{self.stats.evaluations_per_depth[k]} ", end='')
+        c = 1
+
+        for k in sorted(self.stats.evaluations_per_depth.keys(), reverse=True):
+            print(f"{c}:{self.stats.evaluations_per_depth[k]} ", end='')
+            c += 1
         print()
         total_evals = sum(self.stats.evaluations_per_depth.values())
+        # Calculate average branching factor:
+        avg_branching = 0
+        prev_k = None
+        for k in sorted(self.stats.evaluations_per_depth.items(), reverse=True):
+            if prev_k == None:
+                depth, prev_k = k
+            else:
+                # Old number of nodes stored in temp
+                prev_prev_k = prev_k
+                # New number of ndoes stored in prev_k
+                depth, prev_k = k
+                avg_branching += (prev_k/prev_prev_k)
+        if len(self.stats.evaluations_per_depth.keys()) == 0:
+            print(f"Average branching factor: {avg_branching:0.1f}")
+        else:
+            print(
+                f"Average branching factor: {avg_branching / len(self.stats.evaluations_per_depth.keys()):0.1f}")
+        # Clear evaluations_per_depth stats after every turn
+        self.stats.evaluations_per_depth.clear()
+        # Reset timer for next alphabeta call:
+        self.stats.timer = None
+        # Add total number of evaluations of that turn to the total number of evaluations during the game
+        self.stats.cumulative_evals += total_evals
+        print(f"Cumulative evals: {self.stats.cumulative_evals}")
+
+        # Prints number of evaluations performed
         if self.stats.total_seconds > 0:
             print(
                 f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
@@ -667,12 +837,14 @@ class Game:
         self.mod_health(coords.dst, -attack_damage)
         self.mod_health(coords.src, -self_damage)
 
-    def repair(self, coords: CoordPair) -> bool:
+    def is_repairable(self, coords: CoordPair) -> int:
         """lets a unit on one coordinate repair a unit on another. Requires pre-check if repair is possible. 
         Returns if repair was successful."""
         repairing_unit = self.get(coords.src)
         target_unit = self.get(coords.dst)
         restored_health = repairing_unit.repair_amount(target_unit)
+        # print(restored_health, "restored health")
+        return restored_health
         if restored_health == 0:
             return False  # if the health change is 0, it is not a valid move
         self.mod_health(coords.dst, restored_health)
@@ -712,10 +884,13 @@ class Game:
 
             game_timeout = self.options.max_time
             num_of_turns = self.options.max_turns
-            filename = "gameTrace-" + \
+            game_nr = random.randint(1, 1000)
+            FOLDERNAME = "gametrace"
+            filename = f"gameTrace{game_nr}-" + \
                 str(self.options.alpha_beta).lower() + "-" + \
                 str(game_timeout)+"-"+str(num_of_turns)+".txt"
-            f = open(filename, "w")
+            path = os.path.join(FOLDERNAME, filename)
+            f = open(path, "w")
 
             text = "Game Trace" + "\n" + \
                 "---------------------------------------------------------" + "\n"
@@ -764,6 +939,92 @@ class Game:
 
     def initial_Board(self):
         return self.to_string()
+
+    def calc_heuristic(self) -> float:
+        if self.options.heuristic == 0:
+            return game_heuristic_e0(self)
+        if self.options.heuristic == 1:
+            return game_heuristic_e1(self)
+        if self.options.heuristic == 2:
+            return game_heuristic_e2(self)
+        raise AssertionError("There should always be a selected heuristic.")
+
+    def alphabeta_move(self, node: Game = None, depth: int = None, alpha: float = None, beta: float = None, player: Player = None, pruning: bool = None) -> Tuple[int, CoordPair | None, float]:
+        """
+        """
+        # TODO think about min depth
+        if node == None:
+            node = self
+        if depth == None:
+            depth = self.options.max_depth
+        if alpha == None:
+            alpha = -math.inf
+        if beta == None:
+            beta = math.inf
+        if player == None:
+            player = self.next_player
+        if pruning == None:
+            pruning = True
+
+        # Call function to generate list of candidate moves (child nodes).
+        move_candidates = [
+            move_candidate for move_candidate in node.move_candidates()]
+
+        # Check if its leaf nodes and evaluate heuristics if so.
+        if depth == 0 or node.has_winner() or datetime.now() - self.stats.timer > timedelta(seconds=self.options.max_time):  # TODO or if node is terminal
+            return (node.calc_heuristic(), None, 0)
+
+        if player == Player.Attacker:
+            v = -math.inf
+            performed_move = None
+            for possible_move in move_candidates:
+                child_node = node.clone()
+                child_node.perform_move(possible_move, record_move=False)
+                child_node.next_turn()
+
+                # Recusive call to the next depth of current node (parent).
+                (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(
+                    child_node, depth - 1, alpha, beta, Player.Defender)
+
+                if child_node_eval > v:
+                    v = child_node_eval
+                    performed_move = possible_move
+                    # v = max(v, child_node_eval)
+                alpha = max(alpha, v)
+                if pruning:
+                    if beta <= alpha:
+                        break
+            if depth in self.stats.evaluations_per_depth:
+                self.stats.evaluations_per_depth[depth] += len(move_candidates)
+            else:
+                self.stats.evaluations_per_depth[depth] = len(move_candidates)
+            return (v, performed_move, 0)  # TODO handle average depth
+        else:
+            v = math.inf
+            performed_move = None
+            for possible_move in move_candidates:
+                child_node = node.clone()
+                child_node.perform_move(possible_move, record_move=False)
+                child_node.next_turn()
+
+                (child_node_eval, suggested_move, average_depth) = self.alphabeta_move(
+                    child_node, depth - 1, alpha, beta, Player.Attacker)
+
+                if child_node_eval < v:
+                    v = child_node_eval
+                    performed_move = possible_move
+                    # v = min(v, self.alphabeta(child_node, depth -1, alpha, beta, Player.Attacker))
+                beta = min(beta, v)
+                if pruning:
+                    if beta <= alpha:
+                        break
+            # Accumulates number of possible moves at every depth for all branches
+            if depth in self.stats.evaluations_per_depth:
+                self.stats.evaluations_per_depth[depth] += len(move_candidates)
+            else:
+                self.stats.evaluations_per_depth[depth] = len(move_candidates)
+            return (v, performed_move, 0)  # TODO handle average depth
+
 ##############################################################################################################
 
 
@@ -772,6 +1033,10 @@ def main():
     parser = argparse.ArgumentParser(
         prog='ai_wargame',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--alpha_beta', type=bool, default=True,
+                        help='determines if alpha-beta pruning is turned on or off')
+    parser.add_argument('--heuristic', type=int, default=0,
+                        help='heuristic applied: 0 = e0, 1 = e1, 2 = e2')
     parser.add_argument('--max_depth', type=int, help='maximum search depth')
     parser.add_argument('--max_time', type=float, help='maximum search time')
     parser.add_argument('--game_type', type=str, default="manual",
@@ -803,6 +1068,10 @@ def main():
         options.broker = args.broker
     if args.max_turns is not None:
         options.max_turns = args.max_turns
+    if args.alpha_beta is not None:
+        options.alpha_beta = args.alpha_beta
+    if args.heuristic is not None:
+        options.heuristic = args.heuristic
 
     # create a new game
     game = Game(options=options)
@@ -814,6 +1083,11 @@ def main():
     while True:
         print()
         print(game)
+        print(len([move for move in game.move_candidates()]))
+        for move in game.move_candidates():
+            # print(move)
+            pass
+        print(game.suggest_move())
 
         winner = game.has_winner()
         if winner is not None:
