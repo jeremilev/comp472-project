@@ -284,56 +284,8 @@ def game_heuristic_e0(game: Game) -> float:
     return attacker_eval - defender_eval
 
 
+#def game_heuristic_e1_idea_tim(game: Game) -> float:
 def game_heuristic_e1(game: Game) -> float:
-    """
-    1. scale end value by AI health since this is the condition to win or lose.
-    2. number of units player's Alive Units + number of opponent's Dead Units -> the greater the number, the better - it gives a sense of the presence on the board.
-    3. number 
-    4.
-    e(n) = 1. * (2.)
-    e(n) = AI-Health * (nbPlayerUnitsAlive + (6 - nbOpponentUnitsAlive)) +     
-
-
-    """
-
-    # Iterate over the board
-    for item in game.board:
-        pass
-
-
-def game_heuristic_e2(game: Game) -> float:
-    """
-    Evaluating Attacker's vs Defender's units total health pool.
-    Result with higher value is best for Attacker, Lower value for defender.
-    player's AI health is used as modifier should the move eliminate an AI befor
-    all other units. 
-    """
-    # Calculate the sum of health attacker unit's has at measured node.
-    attacker_health = 0
-    attacker_ai_health = 0
-    for (_, unit) in game.player_units(Player.Attacker):
-        # Get AI's health
-        if str(unit.type) == "UnitType.AI":
-            attacker_ai_health = unit.health
-        attacker_health += unit.health
-    # Adding modifier
-    attacker_health = attacker_ai_health * attacker_health
-
-    # Calculate the sum of health defender unit's has at measured node.
-    defender_health = 0
-    defender_ai_health = 0
-    for (_, unit) in game.player_units(Player.Defender):
-        # Get AI's health
-        if str(unit.type) == "UnitType.AI":
-            defender_ai_health = unit.health
-        defender_health += unit.health
-    # Adding modifier
-    defender_health = defender_ai_health * defender_health
-
-    return float(attacker_health-defender_health)
-
-
-def game_heuristic_e1_idea_tim(game: Game) -> float:
     """
     evaluates the strength of the attackers units in comparison to the strength of the defenders units. 
     Sum of the potential damage a unit can cause - Sum of potential damage it can receives.
@@ -349,6 +301,55 @@ def game_heuristic_e1_idea_tim(game: Game) -> float:
         attacker_unit_strength += unit_strength
 
     return float(attacker_unit_strength)
+
+
+def game_heuristic_e2(game: Game) -> float:
+    """
+    Evaluating score based on Attacker's vs Defender's units total health pool.
+    Result with higher value is best for Attacker, Lower value for defender.
+    Modifiers are used to influence decisions.
+    """
+    
+    ai_mod = 100        #Prioritize AI's safety.
+    firewall_mod = 1    #Low value to avoid attacking Firewalls if possible or use it more by defender.
+    program_mod = 2     #Average unit but capable even against Virus/Tech
+    other_mod = 3       #For Virus and Tech
+    attacker_health = 0
+    # Calculate the sum of health attacker unit's has at measured node.
+    for (_, unit) in game.player_units(Player.Attacker):
+        # Get AI's health
+        if str(unit.type) == "UnitType.AI":
+            attacker_health += unit.health * ai_mod
+        # Get Firewall's health
+        elif str(unit.type) == "UnitType.Firewall":
+            attacker_health += unit.health * firewall_mod
+        # Get Program's health
+        elif str(unit.type) == "UnitType.Program":
+            attacker_health += unit.health * program_mod
+        # Get Virus and Tech's health
+        else:
+            attacker_health += unit.health * other_mod
+
+    
+    defender_health = 0
+    # Calculate the sum of health defender unit's has at measured node.
+    for (_, unit) in game.player_units(Player.Defender):
+        # Get AI's health
+        if str(unit.type) == "UnitType.AI":
+            defender_health += unit.health * ai_mod
+        # Get Firewall's health
+        elif str(unit.type) == "UnitType.Firewall":
+            defender_health += unit.health * firewall_mod
+        # Get Program's health
+        elif str(unit.type) == "UnitType.Program":
+            defender_health += unit.health * program_mod
+        # Get Program, Virus and Tech's health
+        else:
+            defender_health += unit.health * other_mod
+
+    # Returning evaluation score of node
+    return float(attacker_health-defender_health)
+
 
 
 @dataclass(slots=True)
