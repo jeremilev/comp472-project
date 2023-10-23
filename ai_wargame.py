@@ -2,6 +2,7 @@ from __future__ import annotations
 import argparse
 import copy
 from datetime import datetime
+from datetime import timedelta
 from enum import Enum
 from dataclasses import dataclass, field
 from time import sleep
@@ -264,6 +265,7 @@ class Stats:
     evaluations_per_depth: dict[int, int] = field(default_factory=dict)
     total_seconds: float = 0.0
     cumulative_evals: int = 0
+    timer: datetime = None
 ##############################################################################################################
 
 
@@ -694,8 +696,9 @@ class Game:
             return (0, None, 0)
 
     def suggest_move(self) -> CoordPair | None:
-        """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
+        """Suggest the next move using minimax alpha beta."""
         start_time = datetime.now()
+        self.stats.timer = datetime.now()
         # (score, move, avg_depth) = self.random_move()
         (score, move, avg_depth) = self.alphabeta_move()
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
@@ -705,15 +708,31 @@ class Game:
         # Prints the number of evaluations made per depth
         print(f"Evals per depth: ", end='')
         c = 1
+
         for k in sorted(self.stats.evaluations_per_depth.keys(), reverse=True):
             print(f"{c}:{self.stats.evaluations_per_depth[k]} ", end='')
             c += 1
         print()
         total_evals = sum(self.stats.evaluations_per_depth.values())
+        # Calculate average branching factor:
+        avg_branching = 0
+        prev_k = None
+        for k in sorted(self.stats.evaluations_per_depth.items(), reverse=True):
+            if prev_k == None:
+                depth, prev_k = k
+            else:
+                # Old number of nodes stored in temp
+                prev_prev_k = prev_k
+                # New number of ndoes stored in prev_k
+                depth, prev_k = k
+                avg_branching += (prev_k/prev_prev_k)
 
+        print(
+            f"Average branching factor: {avg_branching / len(self.stats.evaluations_per_depth.keys()):0.1f}")
         # Clear evaluations_per_depth stats after every turn
         self.stats.evaluations_per_depth.clear()
-
+        # Reset timer for next alphabeta call:
+        self.stats.timer = None
         # Add total number of evaluations of that turn to the total number of evaluations during the game
         self.stats.cumulative_evals += total_evals
         print(f"Cumulative evals: {self.stats.cumulative_evals}")
@@ -919,7 +938,7 @@ class Game:
             move_candidate for move_candidate in node.move_candidates()]
 
         # Check if its leaf nodes and evaluate heuristics if so.
-        if depth == 0 or node.has_winner():  # TODO or if node is terminal
+        if depth == 0 or node.has_winner() or datetime.now() - self.stats.timer > timedelta(seconds=self.options.max_time):  # TODO or if node is terminal
             return (node.calc_heuristic(), None, 0)
 
         if player == Player.Attacker:
