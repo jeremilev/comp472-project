@@ -286,23 +286,55 @@ def game_heuristic_e0(game: Game) -> float:
     return attacker_eval - defender_eval
 
 
-#def game_heuristic_e1_idea_tim(game: Game) -> float:
 def game_heuristic_e1(game: Game) -> float:
     """
-    evaluates the strength of the attackers units in comparison to the strength of the defenders units. 
-    Sum of the potential damage a unit can cause - Sum of potential damage it can receives.
-    Uses the health of the unit a mulitplier.
+    This heuristic evaluates:
+     1. the number of ennemy units near the respective player's AI
+     2. If a Virus unit is close to the defender AI, adding a large positive number to the heuristic.
+     3. If a Virus unit is close to Tech unit, a negative number is added
+     4. If a Virus unit is close to Program unit, a positive number is added
     """
-    attacker_unit_strength = 0
-    for (_, a_unit) in game.player_units(Player.Attacker):
-        unit_strength = 0
-        for (_, d_unit) in game.player_units(Player.Defender):
 
-            unit_strength += a_unit.damage_amount(
-                d_unit) * a_unit.health - d_unit.damage_amount(a_unit) * d_unit.health
-        attacker_unit_strength += unit_strength
+    ennemies_near_AI = 0
+    virus_att_AI = 0
+    virus_near_Tech = 0
+    virus_near_program = 0
+    for (coords, unit) in game.player_units(Player.Attacker):
+        if unit.type.value == 0:
+            in_near_range_of_AI = list([x for x in coords.iter_range(2)])
+            for i in in_near_range_of_AI:
+                if game.get(i) is not None:
+                    if game.get(i).player.name != "Attacker":
+                        ennemies_near_AI += 1
+        if unit.type.value == 2:
+            possible_1_shot = list(
+                [x for x in coords.iter_adjacent_with_diagonal()])
+            for i in possible_1_shot:
+                if game.get(i) is not None:
+                    if game.get(i).player.name != "Attacker" and game.get(i).type.value == 0:
+                        virus_att_AI = 1000
+                    if game.get(i).player.name != "Attacker" and game.get(i).type.value == 1:
+                        virus_near_Tech = -50
+                    if game.get(i).player.name != "Attacker" and game.get(i).type.value == 3:
+                        virus_near_program += 25
 
-    return float(attacker_unit_strength)
+    ennemies_near_def_AI = 0
+    ennemies_long_range_def_AI = 0
+    for (coords, unit) in game.player_units(Player.Defender):
+        if unit.type.value == 0:
+            in_range_of_AI = list([x for x in coords.iter_range(2)])
+            for i in in_range_of_AI:
+                if game.get(i) is not None:
+                    if game.get(i).player.name != "Defender":
+                        ennemies_near_def_AI += 1
+            in_long_range_of_AI = list([x for x in coords.iter_range(3)])
+            for i in in_long_range_of_AI:
+                if game.get(i) is not None:
+                    if game.get(i).player.name != "Defender":
+                        ennemies_long_range_def_AI += 1
+    e2_score = game_heuristic_e2(game)
+
+    return e2_score + 5*(ennemies_near_AI - ennemies_near_def_AI) + ennemies_long_range_def_AI + virus_att_AI + virus_near_program
 
 
 def game_heuristic_e2(game: Game) -> float:
@@ -311,11 +343,12 @@ def game_heuristic_e2(game: Game) -> float:
     Result with higher value is best for Attacker, Lower value for defender.
     Modifiers are used to influence decisions.
     """
-    
-    ai_mod = 100        #Prioritize AI's safety.
-    firewall_mod = 1    #Low value to avoid attacking Firewalls if possible or use it more by defender.
-    program_mod = 2     #Average unit but capable even against Virus/Tech
-    other_mod = 3       #For Virus and Tech
+
+    ai_mod = 1000  # Prioritize AI's safety.
+    # Low value to avoid attacking Firewalls if possible or use it more by defender.
+    firewall_mod = 1
+    program_mod = 3  # Average unit but capable even against Virus/Tech
+    other_mod = 5  # For Virus and Tech
     attacker_health = 0
     # Calculate the sum of health attacker unit's has at measured node.
     for (_, unit) in game.player_units(Player.Attacker):
@@ -332,7 +365,6 @@ def game_heuristic_e2(game: Game) -> float:
         else:
             attacker_health += unit.health * other_mod
 
-    
     defender_health = 0
     # Calculate the sum of health defender unit's has at measured node.
     for (_, unit) in game.player_units(Player.Defender):
@@ -351,7 +383,6 @@ def game_heuristic_e2(game: Game) -> float:
 
     # Returning evaluation score of node
     return float(attacker_health-defender_health)
-
 
 
 @dataclass(slots=True)
@@ -726,9 +757,11 @@ class Game:
                 # New number of ndoes stored in prev_k
                 depth, prev_k = k
                 avg_branching += (prev_k/prev_prev_k)
-
-        print(
-            f"Average branching factor: {avg_branching / len(self.stats.evaluations_per_depth.keys()):0.1f}")
+        if len(self.stats.evaluations_per_depth.keys()) == 0:
+            print(f"Average branching factor: {avg_branching:0.1f}")
+        else:
+            print(
+                f"Average branching factor: {avg_branching / len(self.stats.evaluations_per_depth.keys()):0.1f}")
         # Clear evaluations_per_depth stats after every turn
         self.stats.evaluations_per_depth.clear()
         # Reset timer for next alphabeta call:
