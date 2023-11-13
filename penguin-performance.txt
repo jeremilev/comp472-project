@@ -1,0 +1,195 @@
+Base Decision Tree (criterion: gini---max_depth: None---min_samples_split: 2)
+
+Base DT Classification Report for Penguins
+=Precision=
+Adelie:      0.9736842105263158
+Chinstrap:   1.0
+Gentoo:      1.0
+
+=Recall=
+Adelie:      1.0
+Chinstrap:   0.9285714285714286
+Gentoo:      1.0
+
+=F1-score=
+Adelie:      0.9866666666666666
+Chinstrap:   0.962962962962963
+Gentoo:      1.0
+
+Accuracy:     0.9880952380952381
+
+=Precision=
+Macro avg:       0.9912280701754387
+Weighted avg:    0.9884085213032582
+
+=Recall=
+Macro avg:     0.9761904761904763
+Weighted avg:  0.9880952380952381
+
+=F1-Score=
+Macro avg:     0.9832098765432099
+Weighted avg:  0.9879541446208112
+Top Decision Tree (criterion: None---max_depth: None---min_samples_split: None)
+\Top DT Classification Report for Penguins
+=Precision=
+Adelie:      0.972972972972973
+Chinstrap:   0.9285714285714286
+Gentoo:      1.0
+
+=Recall=
+Adelie:      0.972972972972973
+Chinstrap:   0.9285714285714286
+Gentoo:      1.0
+
+=F1-score=
+Adelie:      0.972972972972973
+Chinstrap:   0.9285714285714286
+Gentoo:      1.0
+
+Accuracy:     0.9761904761904762
+
+=Precision=
+Macro avg:       0.9671814671814672
+Weighted avg:    0.9761904761904762
+
+=Recall=
+Macro avg:     0.9671814671814672
+Weighted avg:  0.9761904761904762
+
+=F1-Score=
+Macro avg:     0.9671814671814672
+Weighted avg:  0.9761904761904762
+Base MLP (network architecture: (100, 100)---activation: logistic---solver: sgd)
+
+Base MLP Classification Report for Penguins
+=Precision=
+Adelie:      0.44047619047619047
+Chinstrap:   0.0
+Gentoo:      0.0
+
+=Recall=
+Adelie:      1.0
+Chinstrap:   0.0
+Gentoo:      0.0
+
+=F1-score=
+Adelie:      0.6115702479338843
+Chinstrap:   0.0
+Gentoo:      0.0
+
+Accuracy:     0.44047619047619047
+
+=Precision=
+Macro avg:       0.14682539682539683
+Weighted avg:    0.19401927437641722
+
+=Recall=
+Macro avg:     0.3333333333333333
+Weighted avg:  0.44047619047619047
+
+=F1-Score=
+Macro avg:     0.20385674931129474
+Weighted avg:  0.2693821330184966
+
+=F1-Score=
+Macro avg:     0.20385674931129474
+Top MLP (network architecture: None---activation: None---solver: None)
+
+Top MLP Classification Report for Penguins
+=Precision=
+Adelie:      0.44047619047619047
+Chinstrap:   0.0
+Gentoo:      0.0
+
+=Recall=
+Adelie:      1.0
+Chinstrap:   0.0
+Gentoo:      0.0
+
+=F1-score=
+Adelie:      0.6115702479338843
+Chinstrap:   0.0
+Gentoo:      0.0
+
+Accuracy:     0.44047619047619047
+
+=Precision=
+Macro avg:       0.14682539682539683
+Weighted avg:    0.19401927437641722
+
+=Recall=
+Macro avg:     0.3333333333333333
+Weighted avg:  0.44047619047619047
+Weighted avg:  0.2693821330184966
+
+Question 6
+accuracy
+Base DT 5 runs accuracy of penguin: [1.0, 0.8452380952380952, 0.9761904761904762, 0.9761904761904762, 0.9761904761904762]
+Base DT avg accuracy of penguin: 0.9547619047619047
+Base DT variance of penguin: 0.031043820977155467
+
+Question 6
+accuracy
+Top DT 5 runs accuracy of penguin: [0.9642857142857143, 0.9404761904761905, 1.0, 0.9761904761904762, 0.9404761904761905]
+Top DT avg accuracy of penguin: 0.9642857142857142
+Top DT variance of penguin: 0.012626906806902635
+
+Question 6
+accuracy
+Base MLP 5 runs accuracy of penguin: [0.32142857142857145, 0.4166666666666667, 0.4166666666666667, 0.3333333333333333, 0.4523809523809524]
+Base MLP avg accuracy of penguin: 0.3880952380952381
+Base MLP variance of penguin: 0.02873218663368374
+
+Question 6
+accuracy
+Top MLP 5 runs accuracy of penguin: [0.4523809523809524, 0.4642857142857143, 0.4523809523809524, 0.4523809523809524, 0.4166666666666667]
+Top MLP avg accuracy of penguin: 0.44761904761904764
+Top MLP variance of penguin: 0.00902723267148994
+
+Question 6
+('macro_avg_f1',)
+Base DT 5 runs ('macro_avg_f1',) of penguin: [1.0, 0.8276870336761445, 0.9797235023041475, 0.9738095238095239, 0.9731088664421997]
+Base DT avg ('macro_avg_f1',) of penguin: 0.9508657852464031
+Base DT variance of penguin: 0.034857848409630555
+
+Question 6
+('macro_avg_f1',)
+Top DT 5 runs ('macro_avg_f1',) of penguin: [0.9627219157944994, 0.9323735241222927, 1.0, 0.9744514660461957, 0.927571211132855]
+Top DT avg ('macro_avg_f1',) of penguin: 0.9594236234191685
+Top DT variance of penguin: 0.01506121086490361
+
+Question 6
+('macro_avg_f1',)
+Base MLP 5 runs ('macro_avg_f1',) of penguin: [0.16216216216216217, 0.19607843137254902, 0.19607843137254902, 0.16666666666666666, 0.20765027322404372]
+Base MLP avg ('macro_avg_f1',) of penguin: 0.1857271929595941
+Base MLP variance of penguin: 0.010042198653346728
+
+Question 6
+('macro_avg_f1',)
+Top MLP 5 runs ('macro_avg_f1',) of penguin: [0.20765027322404372, 0.21138211382113822, 0.20765027322404372, 0.20765027322404372, 0.19607843137254902]
+Top MLP avg ('macro_avg_f1',) of penguin: 0.20608227297316367
+Top MLP variance of penguin: 0.0029105522902055
+
+Question 6
+weighted_avg_f1
+Base DT 5 runs weighted_avg_f1 of penguin: [1.0, 0.8487886382623224, 0.976146587667325, 0.9761904761904762, 0.9761295494628828]
+Base DT avg weighted_avg_f1 of penguin: 0.9554510503166013
+Base DT variance of penguin: 0.03025672284993729
+
+Question 6
+weighted_avg_f1
+Top DT 5 runs weighted_avg_f1 of penguin: [0.9645598838346763, 0.9406968041732293, 1.0, 0.9760823002531316, 0.9435972105737271]
+Top DT avg weighted_avg_f1 of penguin: 0.9649872397669528
+Top DT variance of penguin: 0.01223911503551611
+
+Question 6
+weighted_avg_f1
+Base MLP 5 runs weighted_avg_f1 of penguin: [0.15637065637065636, 0.2450980392156863, 0.2450980392156863, 0.16666666666666666, 0.2818110850897736]
+Base MLP avg weighted_avg_f1 of penguin: 0.21900889731169385
+Base MLP variance of penguin: 0.02735034252227381
+
+Question 6
+weighted_avg_f1
+Top MLP 5 runs weighted_avg_f1 of penguin: [0.2818110850897736, 0.2944250871080139, 0.2818110850897736, 0.2818110850897736, 0.2450980392156863]
+Top MLP avg weighted_avg_f1 of penguin: 0.2769912763186042
+Top MLP variance of penguin: 0.009323384582984746
