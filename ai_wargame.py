@@ -334,7 +334,7 @@ def game_heuristic_e1(game: Game) -> float:
                         ennemies_long_range_def_AI += 1
     e2_score = game_heuristic_e2(game)
 
-    return e2_score + 5*(ennemies_near_def_AI - ennemies_near_AI) + ennemies_long_range_def_AI + virus_att_AI + virus_near_program
+    return e2_score + 5*(ennemies_near_def_AI - ennemies_near_AI) + ennemies_long_range_def_AI + virus_att_AI + virus_near_program + virus_near_Tech
 
 
 def game_heuristic_e2(game: Game) -> float:
