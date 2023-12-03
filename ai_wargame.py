@@ -12,7 +12,7 @@ import requests
 import json
 import os
 import math
-
+import csv
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
 MIN_HEURISTIC_SCORE = -2000000000
@@ -334,7 +334,7 @@ def game_heuristic_e1(game: Game) -> float:
                         ennemies_long_range_def_AI += 1
     e2_score = game_heuristic_e2(game)
 
-    return e2_score + 5*(ennemies_near_AI - ennemies_near_def_AI) + ennemies_long_range_def_AI + virus_att_AI + virus_near_program
+    return e2_score + 5*(ennemies_near_def_AI - ennemies_near_AI) + ennemies_long_range_def_AI + virus_att_AI + virus_near_program
 
 
 def game_heuristic_e2(game: Game) -> float:
@@ -397,6 +397,8 @@ class Game:
     _defender_has_ai: bool = True
     moves_history = []
     board_history = []
+    heuristic_history = []
+    time_history = []
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
@@ -735,7 +737,7 @@ class Game:
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {score}")
-
+        self.heuristic_history.append(score)
         # Prints the number of evaluations made per depth
         print(f"Evals per depth: ", end='')
         c = 1
@@ -877,6 +879,34 @@ class Game:
     def print_history(self):
         for i in self.moves_history:
             print(i)
+
+    def to_eval_data(self):
+        """
+        Appends information to two files 
+        (1) heuristic_data.txt
+        (2) performance_data.txt
+        """
+
+        try:
+            winner = self.has_winner()
+            best_defender_val = min(self.heuristic_history)
+            best_attacker_val = max(self.heuristic_history)
+            p_text = [self.has_winner(), len(self.moves_history),
+                      best_defender_val,  best_attacker_val]
+            with open('performance_data.csv', 'a+') as f:
+                writer = csv.writer(f)
+                writer.writerow(p_text)
+                f.close()
+        except Exception as e:
+            print('Could not output performance data to file.', e)
+        try:
+            with open('heuristic_data.csv', 'a+') as f:
+                h_text = self.heuristic_history[1::2]
+                writer = csv.writer(f)
+                writer.writerow(h_text)
+                f.close()
+        except Exception as e:
+            print('Could not output game trace to file.', e)
 
     def game_trace_to_file(self, initialBoard):
         try:
@@ -1044,6 +1074,7 @@ def main():
     parser.add_argument('--broker', type=str, help='play via a game broker')
     parser.add_argument('--max_turns', type=int, default=100,
                         help='max number of turns: ex: 100')
+
     args = parser.parse_args()
 
     # parse the game type
@@ -1094,6 +1125,7 @@ def main():
             # Output moves to file
             game.print_history()
             game.game_trace_to_file(initialBoard)
+            game.to_eval_data()
 
             print(f"{winner.name} wins!")
             break
@@ -1116,4 +1148,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    for i in range(0, 20):
+        main()
